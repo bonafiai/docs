@@ -1,61 +1,76 @@
 ---
 title: "Quickstart"
-description: "Clone the repos, link Linear, and run the docs site."
+description: "Clone, connect, and run the app in minutes."
 ---
 
-Get the repos open in Cursor and the tooling provisioned. This is the fast lane — no theory required.
+Get the app running locally, then the docs site. No theory required.
 
 ## Prerequisites
 
-Before you begin:
+- [Cursor](https://cursor.com)
+- [GitHub CLI](https://cli.github.com) (`gh auth login`)
+- [Bun](https://bun.sh) 1.2+
+- [PlanetScale CLI](https://planetscale.com/docs/concepts/planetscale-environment-setup) (`pscale auth login`)
 
-- [Cursor](https://cursor.com) installed
-- [Bun](https://bun.sh) 1.2+ (runtime and package manager for `mono`)
-- [Mintlify CLI](https://www.npmjs.com/package/mint) for local docs preview (`npm i -g mint`)
-- Access to the `bonafiai` GitHub org
-
-## Get started
+## Run the app
 
 <Steps>
-  <Step title="Clone the repos">
-    Two repos, two roles:
-
+  <Step title="Clone">
     ```bash
-    git clone https://github.com/bonafiai/docs.git
-    git clone https://github.com/bonafiai/mono.git
+    gh repo clone bonafiai/mono
+    gh repo clone bonafiai/docs
     ```
 
-    - **docs** — this spec hub (beliefs, rules, stack, decisions)
-    - **mono** — the application codebase (reference and implementation)
+    **mono** is the application, **docs** is this spec hub.
   </Step>
-  <Step title="Open in Cursor">
-    Open the **docs** repo (or a multi-root workspace with both). Tooling auto-provisions from the repo:
-
-    - `.cursor/mcp.json` — Mintlify and Linear MCP servers
-    - Pinned skills via `skills-lock.json` (after install)
-    - `AGENTS.md` — writing and agent contract for this repo
-  </Step>
-  <Step title="Link Linear with Cursor">
-    Required for every teammate. Two parts:
-
-    1. **Cursor integration** — Cursor Settings → Integrations → Linear (OAuth)
-    2. **Linear MCP** — set `LINEAR_API_KEY` in your environment; toggle **linear** on under Settings → MCP
-
-    Default motion: agents file Linear issues when work is identified. See [Workflow](/concept/workflow).
-  </Step>
-  <Step title="Run the docs site">
-    From the docs repo root:
-
+  <Step title="Install and configure">
     ```bash
-    mint dev
+    cd mono
+    bun install
+    cp .env.example .env.local
     ```
 
-    Preview at `http://localhost:3000`.
+    Fill the required values in `.env.local`.
   </Step>
-  <Step title="First contribution">
-    Read a spec before you write code. For features in **mono**, the loop starts with `/speckit.specify` — see [Workflow](/concept/workflow). For docs changes here, edit MDX and run `mint validate` before opening a PR.
+  <Step title="Dev database">
+    Create your own PlanetScale dev branch, one branch per developer:
+
+    ```bash
+    pscale branch switch <your-name> --database bonafi --create
+    bun run db:migrate
+    bun run dev:seed
+    ```
+
+    Point `DATABASE_URL` in `.env.local` at the branch connection string. It is real PlanetScale Postgres 17, so dev mirrors prod exactly. Offline fallback: `bun run dev:db:up` starts a local container.
+  </Step>
+  <Step title="Run">
+    ```bash
+    bun run dev
+    ```
+
+    Starts the app and the Inngest dev server together.
   </Step>
 </Steps>
+
+## Connect Cursor
+
+<Steps>
+  <Step title="Open in Cursor">
+    Open the repo. Tooling provisions itself from `.cursor/mcp.json`, `skills-lock.json`, and `AGENTS.md`.
+  </Step>
+  <Step title="Authenticate Linear">
+    The Linear MCP server is preconfigured. Approve the OAuth prompt in your browser when Cursor asks, that is all. Agents create and update issues from day one, see [Workflow](/concept/workflow).
+  </Step>
+</Steps>
+
+## Run the docs site
+
+```bash
+cd docs
+npx mint dev
+```
+
+Preview at `http://localhost:3000`. Validate before a PR with `npx mint validate`.
 
 ## Explore the docs
 
@@ -64,19 +79,16 @@ Before you begin:
     Why we build the way we do.
   </Card>
   <Card title="Rules" icon="shield-check" href="/concept/rules">
-    Hard invariants every implementation must satisfy.
+    Hard invariants every implementation satisfies.
   </Card>
   <Card title="Workflow" icon="arrows-clockwise" href="/concept/workflow">
     Spec-driven development and the Linear loop.
   </Card>
   <Card title="Testing" icon="check-circle" href="/concept/testing">
-    Five verification layers and the six-check CI gate.
-  </Card>
-  <Card title="Decisions" icon="list-checks" href="/concept/decisions">
-    Running log of choices made and why.
+    Five verification layers, six CI checks.
   </Card>
   <Card title="Overview" icon="stack" href="/stack/overview">
-    Technology choices and rejected alternatives.
+    Our technology choices and why.
   </Card>
   <Card title="Tooling" icon="wrench" href="/stack/tooling">
     MCP servers, skills, and core dependencies.

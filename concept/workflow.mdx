@@ -1,9 +1,9 @@
 ---
 title: "Workflow"
-description: "How a feature goes from idea to merged code — spec-first, Linear-tracked, agent-executed."
+description: "How a feature goes from idea to merged code: spec-first, Linear-tracked, agent-executed."
 ---
 
-Workflow is the loop that turns [beliefs](/concept/beliefs) into daily practice. Spec-kit provides the commands; this page defines how we use them.
+Workflow turns [beliefs](/concept/beliefs) into daily practice. Spec-kit provides the commands, this page defines how we use them.
 
 ## The loop
 
@@ -19,16 +19,16 @@ flowchart LR
 
 | Step | Command | Output |
 | --- | --- | --- |
-| Specify | `/speckit.specify` | What and why — no tech stack yet |
+| Specify | `/speckit.specify` | What and why, no tech stack yet |
 | Clarify | `/speckit.clarify` | Gaps closed before planning |
 | Plan | `/speckit.plan` | Tech stack and architecture |
 | Tasks | `/speckit.tasks` | Ordered, dependency-aware task list |
-| Implement | `/speckit.implement` | Code + tests |
-| Converge | `/speckit.converge` | Diff spec vs code; append remaining work |
+| Implement | `/speckit.implement` | Code and tests |
+| Converge | `/speckit.converge` | Diff spec vs code, append remaining work |
 
-**Day 0 in the code repo:** run `specify init` before the first feature commit. Commit `.specify/` and the slash commands so the loop is the path of least resistance.
+Day 0 in the code repo: `specify init` runs before the first feature commit. `.specify/` and the slash commands are committed, so the spec loop is the path of least resistance.
 
-**Docs repo is SSOT for rules.** The code repo's `.specify/memory/constitution.md` mirrors [Rules](/concept/rules). Update both in the same change when rules change.
+This docs repo is the source of truth for rules. The code repo's `.specify/memory/constitution.md` mirrors [Rules](/concept/rules), updated in the same change.
 
 ## Gherkin and E2E binding
 
@@ -41,27 +41,24 @@ Scenario: investor sees committed capital balance
   Then truth contains the committed metric for that investor
 ```
 
-Each scenario gets a stable id (e.g. `CAP-001`). One Playwright test per scenario; the id appears in the test title so coverage is greppable. Definition of done = all scenario tests pass.
+Each scenario gets a stable id (like `CAP-001`). One Playwright test per scenario, id in the test title, so coverage is greppable. Done means all scenario tests pass.
 
 ## How it sticks
 
-Mechanics, not willpower:
-
-1. **Structural day 0** — `.specify/` is committed before feature work starts.
-2. **Agent contract** — `AGENTS.md` in the code repo: no feature work without `specs/NNN-*/spec.md`. If missing, the agent runs `/speckit.specify` first.
-3. **CI gates** — spec-reference check + scenario-coverage check. See [Testing](/concept/testing).
-4. **Converge after ship** — `/speckit.converge` catches drift before the next feature.
-5. **Tasks to Linear** — `/speckit.taskstoissues` pushes tasks; every issue traces to a spec section.
-6. **Rules mirror sync** — hash check keeps `.specify/memory/constitution.md` aligned with docs.
+1. `.specify/` is committed before feature work starts, structure over willpower.
+2. The code repo's `AGENTS.md` requires a `specs/NNN-*/spec.md` before feature work. Missing spec, the agent runs `/speckit.specify` first.
+3. CI gates: spec-reference check and scenario-coverage check, see [Testing](/concept/testing).
+4. `/speckit.converge` catches drift after each feature ships.
+5. `/speckit.taskstoissues` pushes tasks to Linear, every issue traces to a spec section.
 
 ## How we track work
 
-Linear is linked with Cursor for everyone — an onboarding requirement, not a preference. See [Quickstart](/quickstart).
+Linear is linked with Cursor for everyone, an onboarding requirement, see [Quickstart](/quickstart).
 
 | Phase | Motion |
 | --- | --- |
-| Capture | Agent files a Linear issue when work is identified (title, context, spec link) |
-| Execute | Agent works the issue spec-first; human steers in review |
-| Close | PR links the issue; converge appends leftovers as new issues |
+| Capture | The agent files a Linear issue when work is identified: title, context, spec link |
+| Execute | The agent works the issue spec-first, the human steers in review |
+| Close | The PR links the issue, converge appends leftovers as new issues |
 
-This is our default: move fast by creating issues through agents, not by context-switching to write tickets by hand.
+We move fast by creating issues through agents, not by context-switching to write tickets by hand.
