@@ -11,8 +11,8 @@ Preconfigured in `.cursor/mcp.json`, Cursor lists them automatically after you o
 
 | Name | Description |
 | --- | --- |
-| Mintlify | Agents read and search this docs hub |
-| Linear | Agents create, read, and update issues |
+| [Mintlify](https://mintlify.com/docs) | Agents read and search this docs hub |
+| [Linear](https://linear.app/docs/mcp) | Agents create, read, and update issues |
 
 New servers, skills, and dependencies are agreed in Slack or Linear and land here via PR.
 
@@ -22,25 +22,29 @@ Official vendor sources only, pinned via `skills-lock.json`.
 
 | Name | Description |
 | --- | --- |
-| Mintlify | Components, frontmatter, and writing standards for this site |
+| [Mintlify](https://mintlify.com/docs) | Components, frontmatter, and writing standards for this site |
 
 Install: `npx skills add <source>`.
 
 ## Dependencies
 
-The day-0 core, the best and fastest per role. Extend deliberately.
+The day-0 core, the best and fastest per role, every name links to its exact docs. Extend deliberately.
 
 | Name | Description |
 | --- | --- |
-| `bun` | Runtime and package manager |
-| `next` | App framework |
-| `hono` | HTTP API |
-| `drizzle-orm` | Database access |
-| `inngest` | Event bus and jobs |
-| `ai` + `@ai-sdk/*` | LLM calls via the gateway |
-| `zod` | Runtime validation |
-| `vitest` | Unit and integration tests |
-| `@playwright/test` | Acceptance tests |
+| [`bun`](https://bun.sh/docs) | Runtime and package manager |
+| [`next`](https://nextjs.org/docs) | App framework |
+| [`hono`](https://hono.dev/docs) | HTTP API |
+| [`drizzle-orm`](https://orm.drizzle.team/docs/overview) | Database access |
+| [`inngest`](https://www.inngest.com/docs) | Event bus and jobs |
+| [`ai` + `@ai-sdk/*`](https://ai-sdk.dev/docs) | LLM calls via the gateway |
+| [`@workos-inc/authkit-nextjs`](https://workos.com/docs/user-management) | AuthKit sessions and the FGA client |
+| [`@pipedream/sdk`](https://pipedream.com/docs/connect) | Connectors layer |
+| [`@aws-sdk/client-s3`](https://developers.cloudflare.com/r2/api/s3/api/) | R2 client, R2 is S3-compatible |
+| [`llama-cloud-services`](https://docs.cloud.llamaindex.ai/llamaparse/getting_started) | LlamaParse SDK |
+| [`zod`](https://zod.dev) | Runtime validation |
+| [`vitest`](https://vitest.dev/guide/) | Unit and integration tests |
+| [`@playwright/test`](https://playwright.dev/docs/intro) | Acceptance tests |
 
 ## Contract
 

@@ -38,6 +38,8 @@ General Mintlify rules:
 
 ## Content boundaries
 
-Document: workflow, testing, stack, tooling, and later the architecture pages.
+Document: workflow, testing, architecture doctrine (request, events, structure), stack, tooling.
 
-Do not document here: wiring implementation details (until the Architecture pages land), API reference, or open deliberations.
+Do not document here: per-SDK implementation depth (comes later as its own pass), API reference, or open deliberations.
+
+Roster table Names link to the exact official docs of the tool.

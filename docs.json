@@ -19,6 +19,14 @@
         "pages": ["concept/workflow", "concept/testing"]
       },
       {
+        "group": "Architecture",
+        "pages": [
+          "architecture/request",
+          "architecture/events",
+          "architecture/structure"
+        ]
+      },
+      {
         "group": "Stack",
         "pages": ["stack/overview", "stack/tooling"]
       }
