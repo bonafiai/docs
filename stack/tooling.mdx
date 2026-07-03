@@ -1,0 +1,65 @@
+---
+title: "Tooling"
+description: "MCP servers, pinned skills, and core dependencies — versioned in git."
+---
+
+Tooling is what every teammate and agent gets by opening the repo. Nothing ad-hoc on individual machines — rosters live here and in committed config files.
+
+## MCP servers
+
+Adopted servers are in [`.cursor/mcp.json`](https://github.com/bonafiai/docs/blob/main/.cursor/mcp.json). Secrets use `${env:...}` — never committed.
+
+| Server | Purpose | Secret | Status |
+| --- | --- | --- | --- |
+| Mintlify | Read and search this docs hub from agents | OAuth via Cursor | Adopted |
+| Linear | Create/read/update issues; spec → tasks flow | `LINEAR_API_KEY` | Adopted |
+
+Candidates: see [Decisions](/concept/decisions) MCP table. To adopt: decision row → update this page → extend `mcp.json`.
+
+<Info>
+Link Linear in Cursor Settings → Integrations, then enable the **linear** MCP server. Required onboarding — see [Quickstart](/quickstart).
+</Info>
+
+## Skills
+
+Official vendor sources only. No low-star community skills. Pinned via `skills-lock.json` after install.
+
+| Skill | Source | Repo |
+| --- | --- | --- |
+| Mintlify | `https://mintlify.com/docs` | docs (installed) |
+
+Carry forward from mono's lock as needed (confirm each with a decision row): `vercel/ai` (AI SDK), `axiomhq/skills` (observability), others per domain.
+
+Install:
+
+```bash
+npx skills add https://mintlify.com/docs
+```
+
+## Core dependencies (code repo posture)
+
+New dependencies require a [decision](/concept/decisions) row.
+
+| Dependency | Role |
+| --- | --- |
+| `bun` | Runtime and package manager |
+| `next` | App framework |
+| `hono` | HTTP API |
+| `drizzle-orm` | Database access |
+| `inngest` | Event bus and jobs |
+| `ai` + `@ai-sdk/*` | LLM calls via gateway |
+| `zod` | Runtime validation (events, APIs, specs) |
+| `vitest` | Unit and integration tests |
+| `@playwright/test` | E2E acceptance tests |
+
+This list is the day-0 posture for v2 — not every transitive dependency. Extend deliberately, not by default.
+
+## Agent contract (code repo)
+
+When the code repo is scaffolded, root `AGENTS.md` will state:
+
+- No feature work without `specs/NNN-*/spec.md`
+- First agent action on missing spec: `/speckit.specify`
+- Rules mirror: `.specify/memory/constitution.md` ↔ docs [Rules](/concept/rules)
+
+Docs repo `AGENTS.md` covers writing standards for this site.

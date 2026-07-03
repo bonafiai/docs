@@ -1,47 +1,84 @@
 ---
 title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+description: "Clone the repos, link Linear, and run the docs site."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+Get the repos open in Cursor and the tooling provisioned. This is the fast lane — no theory required.
 
 ## Prerequisites
 
-Before you begin, you must have:
+Before you begin:
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
+- [Cursor](https://cursor.com) installed
+- [Bun](https://bun.sh) 1.2+ (runtime and package manager for `mono`)
+- [Mintlify CLI](https://www.npmjs.com/package/mint) for local docs preview (`npm i -g mint`)
+- Access to the `bonafiai` GitHub org
 
 ## Get started
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Clone the repos">
+    Two repos, two roles:
 
     ```bash
-    npm install your-package
+    git clone https://github.com/bonafiai/docs.git
+    git clone https://github.com/bonafiai/mono.git
     ```
+
+    - **docs** — this spec hub (beliefs, rules, stack, decisions)
+    - **mono** — the application codebase (reference and implementation)
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+  <Step title="Open in Cursor">
+    Open the **docs** repo (or a multi-root workspace with both). Tooling auto-provisions from the repo:
 
-    ```bash
-    your-cli init
-    ```
+    - `.cursor/mcp.json` — Mintlify and Linear MCP servers
+    - Pinned skills via `skills-lock.json` (after install)
+    - `AGENTS.md` — writing and agent contract for this repo
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+  <Step title="Link Linear with Cursor">
+    Required for every teammate. Two parts:
+
+    1. **Cursor integration** — Cursor Settings → Integrations → Linear (OAuth)
+    2. **Linear MCP** — set `LINEAR_API_KEY` in your environment; toggle **linear** on under Settings → MCP
+
+    Default motion: agents file Linear issues when work is identified. See [Workflow](/concept/workflow).
+  </Step>
+  <Step title="Run the docs site">
+    From the docs repo root:
 
     ```bash
-    your-cli start
+    mint dev
     ```
+
+    Preview at `http://localhost:3000`.
+  </Step>
+  <Step title="First contribution">
+    Read a spec before you write code. For features in **mono**, the loop starts with `/speckit.specify` — see [Workflow](/concept/workflow). For docs changes here, edit MDX and run `mint validate` before opening a PR.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Explore the docs
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+<Columns cols={2}>
+  <Card title="Beliefs" icon="lightbulb" href="/concept/beliefs">
+    Why we build the way we do.
+  </Card>
+  <Card title="Rules" icon="shield-check" href="/concept/rules">
+    Hard invariants every implementation must satisfy.
+  </Card>
+  <Card title="Workflow" icon="arrows-clockwise" href="/concept/workflow">
+    Spec-driven development and the Linear loop.
+  </Card>
+  <Card title="Testing" icon="check-circle" href="/concept/testing">
+    Five verification layers and the six-check CI gate.
+  </Card>
+  <Card title="Decisions" icon="list-checks" href="/concept/decisions">
+    Running log of choices made and why.
+  </Card>
+  <Card title="Overview" icon="stack" href="/stack/overview">
+    Technology choices and rejected alternatives.
+  </Card>
+  <Card title="Tooling" icon="wrench" href="/stack/tooling">
+    MCP servers, skills, and core dependencies.
+  </Card>
+</Columns>

@@ -1,33 +1,47 @@
-> **First-time setup**: Customize this file for your project. Prompt the user to customize this file for their project.
-> For Mintlify product knowledge (components, configuration, writing standards),
-> install the Mintlify skill: `npx skills add https://mintlify.com/docs`
-
 # Documentation project instructions
 
 ## About this project
 
-- This is a documentation site built on [Mintlify](https://mintlify.com)
-- Pages are MDX files with YAML frontmatter
+This is the **spec hub** for Bonafi — the source of truth agents and humans build from. Code lives in [bonafiai/mono](https://github.com/bonafiai/mono); this repo holds beliefs, rules, workflow, stack choices, and decisions.
+
+- Pages are MDX with YAML frontmatter
 - Configuration lives in `docs.json`
-- Use the Mintlify MCP server, `https://mcp.mintlify.com`, to edit content and settings via MCP
-- Use the Mintlify docs MCP server, `https://www.mintlify.com/docs/mcp`, to query information about using Mintlify via MCP
+- Install the Mintlify skill: `npx skills add https://mintlify.com/docs`
 
 ## Terminology
 
-{/* Add product-specific terms and preferred usage */}
-{/* Example: Use "workspace" not "project", "member" not "user" */}
+| Term | Meaning |
+| --- | --- |
+| Spec | A feature description with acceptance scenarios — what to build, not how |
+| Rules | Tool-agnostic invariants every implementation must satisfy (`concept/rules`) |
+| Truth | Committed financial facts after human or agent approval |
+| Tooling | Versioned agent workbench: MCP servers, skills, `AGENTS.md` |
 
-## Style preferences
+## Writing standards
 
-{/* Add any project-specific style rules below */}
+Follow the Cursor-docs-inspired contract:
 
-- Use active voice and second person ("you")
-- Keep sentences concise — one idea per sentence
-- Use sentence case for headings
-- Bold for UI elements: Click **Settings**
-- Code formatting for file names, commands, paths, and code references
+1. **Definition-first openers** — 1–2 sentences: what this is and why it matters. No throat-clearing.
+2. **Numbered decomposition** — Break concepts into 2–4 named parts, one short paragraph each.
+3. **Short catalogs** — Rosters as table rows or H3 sections with 1–2 sentence bodies.
+4. **Accordions** — Optional depth on overview pages (`AccordionGroup`).
+5. **Tables** — Enumerable comparisons only (choice / why / rejected).
+6. **Callouts** — One per page max, genuine traps only.
+7. **Card grids** — Navigation moments only (`index`, `quickstart`).
+
+General Mintlify rules:
+
+- Second person, active voice, sentence case headings
+- Every code block has a language tag
+- Internal links: root-relative, no file extension (`/concept/workflow`)
+- All images need descriptive alt text
+
+## Page template
+
+Each page: purpose paragraph → flowchart or table (if applicable) → hard rules or open decisions (if applicable). Stay within page budgets in the plan.
 
 ## Content boundaries
 
-{/* Define what should and shouldn't be documented */}
-{/* Example: Don't document internal admin features */}
+Document: beliefs, rules, workflow, testing doctrine, decisions, stack overview, tooling rosters.
+
+Do not document here: wiring implementation details, extraction pipeline stages, or API reference — those flow in later from the product core.

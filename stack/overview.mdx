@@ -1,0 +1,45 @@
+---
+title: "Overview"
+description: "Technology choices, why we made them, and what we rejected."
+---
+
+Overview holds product and toolchain decisions — not wiring diagrams. Implementation pages flow in later from the product core.
+
+## Product stack
+
+| Choice | Why | Rejected |
+| --- | --- | --- |
+| Next.js 16 | App router, Vercel deployment, RSC for review UI | Separate SPA + API (more surface area) |
+| Hono | Typed API on catch-all route; modular routers from day one | Monolithic 3000-line route file |
+| WorkOS AuthKit + FGA | Auth0 sales/complexity; clean AuthKit + FGA swap surface | Stay on Auth0 |
+| Drizzle + PlanetScale Postgres | Typed SQL, migrations, RLS-capable Postgres | ORM-less raw SQL (slower iteration) |
+| Inngest | Typed events, durable steps, crons — already proven in mono | Ad-hoc queues / inline async |
+| Vercel AI SDK v6 | Standard agent loop, tool calling, gateway integration | Direct provider SDKs per call site |
+| Vercel AI Gateway | One attribution path, multi-model, BYOK | Direct Anthropic only (split-brain attribution) |
+| Cloudflare R2 | Single object-store seam; content-addressed keys; EU-capable | GCS for app storage (only needed for legacy Doc AI) |
+| LlamaParse v2 | Current parser direction; frozen artifact contract | Document AI (deprecated in mono) |
+| Vercel | Hosting, preview deploys, edge where it helps | Self-hosted k8s (ops cost) |
+
+<AccordionGroup>
+  <Accordion title="LlamaParse vs Reducto">
+    Default: LlamaParse v2. Reducto is evaluated behind the same parse-artifact seam (Stage 2 contract). Decision open — see [Decisions](/concept/decisions) row 10. Eval criteria: grounded per-cell bboxes, table fidelity, EU residency, cost per page.
+  </Accordion>
+  <Accordion title="Why not replace Inngest">
+    Mono already has a typed Zod event registry, single `publish()` contract, 28 functions, and cron backstops. The problem was bypasses and inline async — not the bus. Fix discipline, keep Inngest.
+  </Accordion>
+  <Accordion title="Why WorkOS">
+    Smaller auth surface than Auth0 for our stage. FGA principles transfer (tuple writes, relation checks). Session bridge pattern stays; vendor swap is bounded.
+  </Accordion>
+</AccordionGroup>
+
+## Toolchain
+
+| Choice | Why | Rejected |
+| --- | --- | --- |
+| Bun | Runtime + package manager in one tool | pnpm/npm split |
+| oxlint + prettier | Fast lint; consistent format | ESLint-only default (slower) |
+| Vitest | Bun-compatible; 193 tests in mono | Jest (heavier) |
+| Playwright | E2E + Gherkin scenario binding | Cypress |
+| spec-kit | Constitution → specify → plan → tasks → implement | Ad-hoc prompts only |
+
+Tooling rosters (MCP, skills, dependencies) live in [Tooling](/stack/tooling).

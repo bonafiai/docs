@@ -1,0 +1,68 @@
+---
+title: "Testing"
+description: "Five verification layers and exactly six CI checks — no more."
+---
+
+Testing doctrine defines how we know the agent built what the spec said. Every later feature spec writes its acceptance scenarios against this contract.
+
+## Five layers
+
+| Layer | What it catches | Must never require |
+| --- | --- | --- |
+| Static | Syntax, types, formatting | Network, keys, judgment |
+| Invariant scripts | Repo-specific rules made executable | External services |
+| Unit | Pure logic, components | Network, model, env vars |
+| Integration | Database, migrations, tenant boundaries | LLM, paid APIs |
+| E2E acceptance | User-visible behavior from specs | LLM in the gate |
+
+### Static
+
+oxlint + prettier + `tsc`. Free and instant.
+
+### Invariant scripts
+
+Tiny checks in `bun run lint` — the [rules](/concept/rules) made executable. Examples: truth-write guard, spec-reference check, scenario-coverage check, rules-mirror hash check.
+
+### Unit
+
+Vitest. Deterministic. No network, no model, no env vars on the default path.
+
+### Integration
+
+Vitest `*.integration.test.ts` against real Postgres (pgvector) with migrations applied. Skips locally without `EXTRACTION_TEST_DATABASE_URL`; runs in CI via a service container.
+
+### E2E acceptance
+
+Playwright. One spec scenario = one test. Scenario id in the test title. Runs against a production build with seeded fixtures. This layer makes spec-driven development verifiable.
+
+## The PR gate — six checks, no more
+
+| Check | Layer |
+| --- | --- |
+| lint | Static + invariant scripts |
+| typecheck | Static |
+| unit | Unit |
+| integration | Integration |
+| e2e-acceptance | E2E |
+| spec-reference | Invariant (PR must reference a spec directory) |
+
+All deterministic. All key-free. No LLM calls in the gate.
+
+**Explicitly out of the gate:** LLM-in-the-loop evals (nondeterministic, paid — nightly or on-demand only), coverage percentage thresholds (vanity), visual snapshot tests (flaky).
+
+<Warning>
+The gate does not grow by default. Adding a seventh check requires a [decision](/concept/decisions) row and a written reason.
+</Warning>
+
+## Libraries
+
+| Choice | Why | Rejected |
+| --- | --- | --- |
+| Vitest | Bun-compatible, proven in mono, jsdom + Testing Library | bun:test as primary (ecosystem gap — open row) |
+| Playwright | Standard E2E, trace/debug tooling, Gherkin id in titles | Cypress (slower, weaker parallelism) |
+
+Playwright is also a candidate MCP server so agents can debug failing acceptance tests.
+
+## Docs-only PRs
+
+Use a companion workflow that reports success for required checks when only docs change — so docs PRs never wedge waiting for code CI.
