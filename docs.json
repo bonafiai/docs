@@ -16,12 +16,7 @@
       },
       {
         "group": "Concept",
-        "pages": [
-          "concept/beliefs",
-          "concept/rules",
-          "concept/workflow",
-          "concept/testing"
-        ]
+        "pages": ["concept/workflow", "concept/testing"]
       },
       {
         "group": "Stack",

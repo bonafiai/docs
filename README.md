@@ -1,6 +1,6 @@
 # Bonafi docs
 
-Spec hub for Bonafi: beliefs, rules, workflow, stack, and tooling. Built with [Mintlify](https://mintlify.com).
+Spec hub for Bonafi: workflow, testing, stack, and tooling. Built with [Mintlify](https://mintlify.com).
 
 ## Repos
 

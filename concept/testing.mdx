@@ -1,37 +1,37 @@
 ---
 title: "Testing"
-description: "Five verification layers and exactly six CI checks, no more."
+description: "The commands you run and the gate your PR passes."
 ---
 
-Testing is how we know the agent built what the spec said. Every feature spec writes its acceptance scenarios against this contract.
+Run these locally, CI runs the same. Green locally means green in the gate.
 
-## Five layers
+## Commands
 
-| Layer | What it catches |
+| Name | Description |
 | --- | --- |
-| Static | Syntax, types, formatting (oxlint, prettier, `tsc`) |
-| Invariant scripts | Repo rules made executable, run inside `bun run lint` |
-| Unit | Pure logic and components (Vitest, no network, no model, no env) |
-| Integration | Database, migrations, tenant boundaries (Vitest against real Postgres in CI) |
-| E2E acceptance | User-visible behavior from specs (Playwright) |
+| `bun run lint` | oxlint, prettier, and the invariant scripts (truth-write guard, spec-reference, scenario-coverage) |
+| `bun run typecheck` | `tsc`, no emit |
+| `bun run test` | Vitest, unit plus integration (integration needs the dev database) |
+| `bunx playwright test` | E2E acceptance, one test per spec scenario |
 
-Invariant scripts include the truth-write guard, the spec-reference check, the scenario-coverage check, and the rules-mirror hash check.
+Before every push: `bun run lint && bun run typecheck && bun run test`.
 
-E2E acceptance is the layer that makes spec-driven development verifiable: one spec scenario = one Playwright test, scenario id in the test title, run against a production build with seeded fixtures.
+## Layers
 
-## The PR gate, six checks
+| Name | Description |
+| --- | --- |
+| Static | Syntax, types, formatting, free and instant |
+| Invariant | The guardrails as executable scripts inside lint |
+| Unit | Pure logic, no network, no model, no env |
+| Integration | Real Postgres, migrations applied, tenant boundaries |
+| Acceptance | Playwright against a production build, scenario id in the title |
 
-lint, typecheck, unit, integration, e2e-acceptance, spec-reference. All deterministic, all key-free.
+Acceptance is what makes spec-driven development verifiable: the spec says the behavior, the test proves the agent built it.
 
-Out of the gate: LLM evals (nondeterministic, paid, nightly or on-demand only), coverage percentages, visual snapshots. Docs-only PRs pass through a companion workflow so they never wedge.
+## Gate
+
+Six required checks on every PR: lint, typecheck, unit, integration, e2e-acceptance, spec-reference. All deterministic, all key-free. LLM evals run nightly, never in the gate. Docs-only PRs pass through a companion workflow.
 
 <Warning>
 The gate does not grow by default. A seventh check needs a written reason.
 </Warning>
-
-## Libraries
-
-| Choice | Why |
-| --- | --- |
-| Vitest | Bun-compatible, proven in the codebase, jsdom and Testing Library for components |
-| Playwright | The E2E standard, trace and debug tooling, Gherkin scenario ids in test titles |

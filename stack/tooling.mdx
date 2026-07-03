@@ -1,34 +1,36 @@
 ---
 title: "Tooling"
-description: "MCP servers, pinned skills, and core dependencies, versioned in git."
+description: "MCP servers, skills, and dependencies, versioned in git."
 ---
 
-Tooling is what every teammate and agent gets by opening the repo. Rosters live here and in committed config, nothing ad-hoc on individual machines.
+Everything a teammate or agent gets by opening the repo. Rosters live here and in committed config, nothing ad-hoc on individual machines.
 
-## MCP servers
+## Servers
 
-Configured in [`.cursor/mcp.json`](https://github.com/bonafiai/docs/blob/main/.cursor/mcp.json).
+Preconfigured in `.cursor/mcp.json`, Cursor lists them automatically after you open the repo. Approve the OAuth prompt in the browser once, done.
 
-| Server | Purpose | Auth |
-| --- | --- | --- |
-| Mintlify | Read and search this docs hub from agents | OAuth (browser) |
-| Linear | Create, read, and update issues from agents | OAuth (browser) |
+| Name | Description |
+| --- | --- |
+| Mintlify | Agents read and search this docs hub |
+| Linear | Agents create, read, and update issues |
 
-New MCP servers, skills, and dependencies are agreed in Slack or Linear and land here via PR.
+New servers, skills, and dependencies are agreed in Slack or Linear and land here via PR.
 
 ## Skills
 
-Official vendor sources only, pinned via `skills-lock.json`. No low-star community skills.
+Official vendor sources only, pinned via `skills-lock.json`.
 
-| Skill | Source |
+| Name | Description |
 | --- | --- |
-| Mintlify | `https://mintlify.com/docs` |
+| Mintlify | Components, frontmatter, and writing standards for this site |
 
 Install: `npx skills add <source>`.
 
-## Core dependencies (code repo)
+## Dependencies
 
-| Dependency | Role |
+The day-0 core, the best and fastest per role. Extend deliberately.
+
+| Name | Description |
 | --- | --- |
 | `bun` | Runtime and package manager |
 | `next` | App framework |
@@ -38,14 +40,12 @@ Install: `npx skills add <source>`.
 | `ai` + `@ai-sdk/*` | LLM calls via the gateway |
 | `zod` | Runtime validation |
 | `vitest` | Unit and integration tests |
-| `@playwright/test` | E2E acceptance tests |
+| `@playwright/test` | Acceptance tests |
 
-This is the day-0 posture, not every transitive dependency. Extend deliberately.
-
-## Agent contract (code repo)
+## Contract
 
 The code repo's root `AGENTS.md` states:
 
 - No feature work without `specs/NNN-*/spec.md`
 - First agent action on a missing spec: `/speckit.specify`
-- Rules mirror: `.specify/memory/constitution.md` matches docs [Rules](/concept/rules)
+- `.specify/memory/constitution.md` matches the [guardrails](/concept/workflow#guardrails)

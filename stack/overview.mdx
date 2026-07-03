@@ -1,33 +1,33 @@
 ---
 title: "Overview"
-description: "Our technology choices and why."
+description: "Our technology choices."
 ---
 
-The stack, each choice and what it does for us. Wiring pages flow in later from the product core.
+We pick the best and fastest tool per job, each behind a seam we can swap. Wiring pages flow in later from the product core.
 
-## Product stack
+## Product
 
-| Choice | Why |
+| Name | Description |
 | --- | --- |
 | Next.js 16 | App router, RSC for the review UI, Vercel deployment |
 | Hono | Typed API on a catch-all route, modular routers from day one |
-| WorkOS | Our identity and authorization platform: AuthKit sessions, FGA for object-level access |
-| Drizzle + PlanetScale Postgres | Typed SQL, migrations, dev branches that mirror prod |
-| Inngest | Typed events, durable steps, crons; one publish contract for everything async |
+| WorkOS | Identity and authorization: AuthKit sessions, FGA for object-level access |
+| Drizzle + PlanetScale | Typed SQL, migrations, Postgres dev branches that mirror prod |
+| Inngest | Typed events, durable steps, crons, one publish contract for everything async |
 | Vercel AI SDK v6 | The agent loop: streaming, tool calling, structured output |
 | Vercel AI Gateway | One attribution path, multi-model routing, BYOK |
 | Cloudflare R2 | Object storage, content-addressed keys, EU-capable |
-| LlamaParse v2 | The parser, producing one frozen artifact per source behind the parser seam |
+| LlamaParse v2 | The parser behind the parser seam, swappable in no time (Reducto under evaluation) |
 | Vercel | Hosting, preview deploys, edge where it helps |
 
-## Toolchain
+## Tools
 
-| Choice | Why |
+| Name | Description |
 | --- | --- |
-| Bun | Runtime and package manager in one tool |
+| Bun | Runtime and package manager in one |
 | oxlint + prettier | Fast lint, consistent format, invariant scripts ride along |
 | Vitest | Unit and integration tests |
-| Playwright | E2E acceptance tests bound to spec scenarios |
-| spec-kit | Constitution, specify, plan, tasks, implement, converge |
+| Playwright | Acceptance tests bound to spec scenarios |
+| spec-kit | The workflow commands, see [Workflow](/concept/workflow) |
 
-Tooling rosters (MCP servers, skills, dependencies) live in [Tooling](/stack/tooling).
+Rosters (MCP servers, skills, dependencies) live in [Tooling](/stack/tooling).

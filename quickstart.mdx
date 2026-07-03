@@ -1,16 +1,40 @@
 ---
 title: "Quickstart"
-description: "Clone, connect, and run the app in minutes."
+description: "From a blank machine to a running app."
 ---
 
-Get the app running locally, then the docs site. No theory required.
+Everything from a blank Mac to the app running locally. Follow top to bottom, each step tells you what success looks like.
 
-## Prerequisites
+## Install the tools
 
-- [Cursor](https://cursor.com)
-- [GitHub CLI](https://cli.github.com) (`gh auth login`)
-- [Bun](https://bun.sh) 1.2+
-- [PlanetScale CLI](https://planetscale.com/docs/concepts/planetscale-environment-setup) (`pscale auth login`)
+<Steps>
+  <Step title="Homebrew">
+    Paste in your terminal ([docs.brew.sh](https://docs.brew.sh/Installation)):
+
+    ```bash
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    ```
+
+    Success: `brew --version` prints a version number.
+  </Step>
+  <Step title="Toolbelt">
+    One command installs everything:
+
+    ```bash
+    brew install gh node oven-sh/bun/bun planetscale/tap/pscale
+    ```
+
+    That is GitHub CLI, Node, Bun, and the PlanetScale CLI.
+  </Step>
+  <Step title="Sign in">
+    ```bash
+    gh auth login
+    pscale auth login
+    ```
+
+    Each opens a browser, approve, done. Also install [Cursor](https://cursor.com) if you have not.
+  </Step>
+</Steps>
 
 ## Run the app
 
@@ -21,9 +45,9 @@ Get the app running locally, then the docs site. No theory required.
     gh repo clone bonafiai/docs
     ```
 
-    **mono** is the application, **docs** is this spec hub.
+    **mono** is the application, **docs** is this site.
   </Step>
-  <Step title="Install and configure">
+  <Step title="Configure">
     ```bash
     cd mono
     bun install
@@ -32,8 +56,8 @@ Get the app running locally, then the docs site. No theory required.
 
     Fill the required values in `.env.local`.
   </Step>
-  <Step title="Dev database">
-    Create your own PlanetScale dev branch, one branch per developer:
+  <Step title="Database">
+    Your own dev branch, real PlanetScale Postgres, mirrors prod:
 
     ```bash
     pscale branch switch <your-name> --database bonafi --create
@@ -41,27 +65,20 @@ Get the app running locally, then the docs site. No theory required.
     bun run dev:seed
     ```
 
-    Point `DATABASE_URL` in `.env.local` at the branch connection string. It is real PlanetScale Postgres 17, so dev mirrors prod exactly. Offline fallback: `bun run dev:db:up` starts a local container.
+    Point `DATABASE_URL` in `.env.local` at the branch connection string. Offline fallback: `bun run dev:db:up` starts a local container.
   </Step>
   <Step title="Run">
     ```bash
     bun run dev
     ```
 
-    Starts the app and the Inngest dev server together.
+    Success: the app on `http://localhost:3000` and the Inngest dev server running next to it.
   </Step>
 </Steps>
 
 ## Connect Cursor
 
-<Steps>
-  <Step title="Open in Cursor">
-    Open the repo. Tooling provisions itself from `.cursor/mcp.json`, `skills-lock.json`, and `AGENTS.md`.
-  </Step>
-  <Step title="Authenticate Linear">
-    The Linear MCP server is preconfigured. Approve the OAuth prompt in your browser when Cursor asks, that is all. Agents create and update issues from day one, see [Workflow](/concept/workflow).
-  </Step>
-</Steps>
+Open the repo in Cursor. The MCP servers (Mintlify, Linear) are preconfigured in `.cursor/mcp.json`, Cursor lists them automatically. When prompted, approve the Linear OAuth in your browser, that is the whole setup. Agents can now create and update issues, see [Workflow](/concept/workflow).
 
 ## Run the docs site
 
@@ -70,27 +87,21 @@ cd docs
 npx mint dev
 ```
 
-Preview at `http://localhost:3000`. Validate before a PR with `npx mint validate`.
+Success: this site on `http://localhost:3000`. Validate changes with `npx mint validate`.
 
-## Explore the docs
+## Explore
 
 <Columns cols={2}>
-  <Card title="Beliefs" icon="lightbulb" href="/concept/beliefs">
-    Why we build the way we do.
-  </Card>
-  <Card title="Rules" icon="shield-check" href="/concept/rules">
-    Hard invariants every implementation satisfies.
-  </Card>
   <Card title="Workflow" icon="arrows-clockwise" href="/concept/workflow">
-    Spec-driven development and the Linear loop.
+    Spec-driven development, guardrails, and the Linear loop.
   </Card>
   <Card title="Testing" icon="check-circle" href="/concept/testing">
-    Five verification layers, six CI checks.
+    The commands you run and the CI gate.
   </Card>
   <Card title="Overview" icon="stack" href="/stack/overview">
-    Our technology choices and why.
+    Our technology choices.
   </Card>
   <Card title="Tooling" icon="wrench" href="/stack/tooling">
-    MCP servers, skills, and core dependencies.
+    MCP servers, skills, and dependencies.
   </Card>
 </Columns>
