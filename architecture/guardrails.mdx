@@ -1,0 +1,193 @@
+---
+title: "Guardrails"
+description: "The rules and checklists you act on, per plane."
+---
+
+These are the house rules. Every rule is a copyable one-liner: the code repo's `.specify/memory/constitution.md` will transcribe this page, and CI enforces the mechanical subset. Jump to your plane, read the rules, run the checklist.
+
+## Structure
+
+- One app, one deploy, hard module boundaries.
+- A module owns its logic, Hono router, jobs, and schema slice.
+- Modules talk through exported functions and events, never another module's tables.
+- `shared/` stays small: event registry, tenant transaction, gateway client.
+
+**Act**
+
+- Name the domain folder under `lib/`.
+- Add `router.ts`, `jobs/`, `schema.ts`, and the domain logic file.
+- Export only what other modules need, listen for events instead of reaching across tables.
+- Done when: you can point to one folder and everything for that domain lives there.
+
+<Accordion title="Module and app layout">
+
+```text
+lib/
+  sources/
+    router.ts
+    jobs/
+    schema.ts
+    parse.ts
+  review/
+  entities/
+  connectors/
+  shared/
+
+app/
+  (app)/
+    review/
+      page.tsx
+      _components/
+      _lib/
+  api/
+    [[...route]]/
+proxy.ts
+```
+
+| Name | Description |
+| --- | --- |
+| Route groups | `(app)` groups routes without affecting URLs |
+| `_components`, `_lib` | Private folders, colocated, excluded from routing |
+| Catch-all API | One `app/api/[[...route]]`, Hono owns everything under `/api` |
+
+- UI imports from `lib/<module>`, never the other way around.
+- If `shared/` grows, something is misplaced.
+
+</Accordion>
+
+## Request
+
+- Every request follows one path: edge gate, domain router, permission, tenant transaction.
+- `proxy.ts` redirects to login on pages only, `/api` excluded. It never authorizes.
+- Handlers validate, persist, publish, return. Nothing slow stays in the handler.
+- Exempt: `/api/inngest` (Inngest-signed) and webhooks (HMAC-verified).
+
+**Act**
+
+- Which domain router does the route join?
+- Which permission slug gates it?
+- What does it publish, if anything?
+- Done when: you can answer all three, or the spec is not done.
+
+<Accordion title="Handler contract">
+
+A handler does four things, in order:
+
+1. Validate input (zod).
+2. Read or persist inside the tenant transaction.
+3. `publish()` an event for anything slow.
+4. Return.
+
+Handlers never parse documents, never call models, never loop on external APIs. If it takes longer than a beat, it goes to the bus.
+
+| Name | Description |
+| --- | --- |
+| `proxy.ts` | Optimistic session gate, pages only |
+| Router | One Hono router per domain module on the catch-all |
+| Session | Middleware sets user, org, and roles on the typed env |
+| Permission | Every business route gates on a permission slug |
+| Transaction | All reads and writes inside a tenant-bound transaction |
+
+</Accordion>
+
+## Access
+
+Four narrowing layers, each must pass before the next:
+
+| Name | Description |
+| --- | --- |
+| Session | AuthKit session, user and org on the env |
+| Tenant | Active org claim matches the database key |
+| Permission | Route gated on a permission slug |
+| Object | FGA check on the specific resource |
+
+- One tenant key everywhere: session claim = database key = permission object.
+- The edge gate never authorizes, it only redirects.
+
+**Act**
+
+- Pick the permission slug for the route.
+- Add the FGA relation if the route touches a specific object.
+- Done when: an unauthenticated, wrong-tenant, or under-permissioned caller gets blocked before data.
+
+## Data
+
+- All reads and writes run inside a tenant transaction with an explicit org predicate.
+- A module owns its tables, no cross-module queries.
+- Exactly one big JSONB in the system: the raw parse artifact.
+- Truth is written only through the commit path, with its decision record, in one transaction.
+- Objects are content-addressed and immutable.
+
+**Act**
+
+- Add the table in the owning module's `schema.ts`.
+- Write the migration, apply on your dev branch.
+- Gate every query with the org predicate inside the tenant transaction.
+- Done when: a row from another tenant is unreachable by construction.
+
+## Events
+
+- Everything async flows through one typed `publish()` into Inngest.
+- Inside a job, `step.sendEvent(buildEvent(...))` uses the same registry. Raw sends are forbidden.
+- Events are named `noun.verb`, past tense: `source.uploaded`, `proposal.committed`.
+- Every job: one trigger, thin shell, fat domain module, one completion event.
+
+**Act**
+
+- Define the event in the registry, `noun.verb`, zod schema.
+- Pick the concurrency key and the stance, write both in the spec.
+- Emit exactly one completion event.
+- Done when: the job replays cleanly from the previous stage's persisted output.
+
+<Accordion title="Stances and replayability">
+
+| Name | Description |
+| --- | --- |
+| Recompute | Safe to re-run, rebuilds output from persisted input |
+| Keyed | Serialized per entity by the concurrency key |
+| Re-runnable | Re-processing is the feature, like re-parsing a source |
+
+A stage reads only the persisted output of the previous stage, never another job's memory. Re-running any stage creates a new run and re-emits its completion event, so everything downstream replays by construction.
+
+Non-fatal publishes get a backstop cron: if an event was swallowed, an hourly sweep re-queues the missing work.
+
+| Name | Description |
+| --- | --- |
+| Trigger | Exactly one event, or a cron |
+| Shell | Thin Inngest function that delegates to a domain module |
+| Concurrency | Keyed by org plus entity, no cross-tenant races |
+| Completion | Emits exactly one event when done |
+
+</Accordion>
+
+## Intelligence
+
+- Every model call goes through the gateway registry.
+- Tools live in one capability-gated, idempotent registry.
+- Chat agents stream. Job agents are durable and read-only.
+
+**Act**
+
+- Register the model in the gateway, not inline.
+- Add the tool to the registry with its capability gate.
+- Done when: no handler or job imports a provider SDK directly.
+
+## Observability
+
+- One logger, fire-and-forget.
+- Request id travels from edge to job.
+- Tool calls are audited.
+
+**Act**
+
+- Pass the request id through middleware into handlers and jobs.
+- Log at boundaries: request in, event published, job complete.
+- Done when: you can trace one user action from browser to job in the logs.
+
+## Enforcement
+
+| Name | Description |
+| --- | --- |
+| This page | The rules, the only form humans read |
+| Constitution | `.specify/memory/constitution.md` in the code repo, checked by `/speckit.plan` on every feature |
+| Invariant scripts | The mechanical subset, run inside `bun run lint`, required on every PR |

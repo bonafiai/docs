@@ -78,7 +78,7 @@ Everything from a blank Mac to the app running locally. Follow top to bottom, ea
 
 ## Connect Cursor
 
-Open the repo in Cursor. The MCP servers (Mintlify, Linear) are preconfigured in `.cursor/mcp.json`, Cursor lists them automatically. When prompted, approve the Linear OAuth in your browser, that is the whole setup. Agents can now create and update issues, see [Workflow](/concept/workflow).
+Open the repo in Cursor. The MCP servers (Mintlify, Linear) are preconfigured in `.cursor/mcp.json`, Cursor lists them automatically. When prompted, approve the Linear OAuth in your browser, that is the whole setup. Agents can now create and update issues, see [Workflow](/method/workflow).
 
 ## Run the docs site
 
@@ -92,14 +92,17 @@ Success: this site on `http://localhost:3000`. Validate changes with `npx mint v
 ## Explore
 
 <Columns cols={2}>
-  <Card title="Workflow" icon="arrows-clockwise" href="/concept/workflow">
-    Spec-driven development, guardrails, and the Linear loop.
+  <Card title="Workflow" icon="arrows-clockwise" href="/method/workflow">
+    Spec-driven development and the Linear loop.
   </Card>
-  <Card title="Testing" icon="check-circle" href="/concept/testing">
+  <Card title="Testing" icon="check-circle" href="/method/testing">
     The commands you run and the CI gate.
   </Card>
-  <Card title="Architecture" icon="sitemap" href="/architecture/request">
-    How requests, events, and modules flow.
+  <Card title="Overview" icon="sitemap" href="/architecture/overview">
+    The system map and the planes.
+  </Card>
+  <Card title="Guardrails" icon="shield-check" href="/architecture/guardrails">
+    The rules and checklists per plane.
   </Card>
   <Card title="Overview" icon="stack" href="/stack/overview">
     Our technology choices.

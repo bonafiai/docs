@@ -15,16 +15,12 @@
         "pages": ["index", "quickstart"]
       },
       {
-        "group": "Concept",
-        "pages": ["concept/workflow", "concept/testing"]
+        "group": "Method",
+        "pages": ["method/workflow", "method/testing"]
       },
       {
         "group": "Architecture",
-        "pages": [
-          "architecture/request",
-          "architecture/events",
-          "architecture/structure"
-        ]
+        "pages": ["architecture/overview", "architecture/guardrails"]
       },
       {
         "group": "Stack",

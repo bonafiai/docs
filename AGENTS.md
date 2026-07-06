@@ -13,14 +13,14 @@ This is the spec hub for Bonafi, the source of truth agents and humans build fro
 | Name | Description |
 | --- | --- |
 | Spec | A feature description with acceptance scenarios, what to build, not how |
-| Guardrails | Our product-specific invariants (`concept/workflow#guardrails`) |
+| Guardrails | Our product-specific invariants (`/architecture/guardrails`) |
 | Truth | Committed financial facts after human or agent approval |
 | Tooling | Versioned agent workbench: MCP servers, skills, `AGENTS.md` |
 
 ## Writing standards
 
 1. **Definition-first openers.** 1-2 sentences: what this is and why it matters. No throat-clearing.
-2. **Scannable above all.** 1-2 minute read per page. If it takes longer, cut it.
+2. **Scannable above all.** The 1-2 minute budget is for the scan with accordions collapsed, not the word count. Depth folds into accordions and tables instead of being cut. Rules and checklists never go inside an accordion.
 3. **Command-first.** Where a page has commands, they come before the explanation.
 4. **Tables.** Two columns: Name | Description. No "Rejected" columns, no status theater.
 5. **Headings one word** where possible, sentence case.
@@ -29,16 +29,33 @@ This is the spec hub for Bonafi, the source of truth agents and humans build fro
 8. **Callouts.** One per page max, genuine traps only.
 9. **Card grids.** Navigation moments only (`index`, `quickstart`).
 
+## Symmetry
+
+Every group is exactly two pages: the first orients, the second is what you act on. One-word page names, plain nouns, no metaphors in the sidebar.
+
+| Group | Orient | Act |
+| --- | --- | --- |
+| Getting started | Introduction | Quickstart |
+| Method | Workflow | Testing |
+| Architecture | Overview | Guardrails |
+| Stack | Overview | Tooling |
+
+## Diagrams
+
+- Vertical `TD` for chains, 9 nodes max per diagram.
+- Linear flows are tables or Steps, not wide LR diagrams.
+- Keep diagrams tall enough for Mintlify zoom controls.
+
 General Mintlify rules:
 
 - Second person, active voice, sentence case headings
 - Every code block has a language tag
-- Internal links: root-relative, no file extension (`/concept/workflow`)
+- Internal links: root-relative, no file extension (`/method/workflow`)
 - All images need descriptive alt text
 
 ## Content boundaries
 
-Document: workflow, testing, architecture doctrine (request, events, structure), stack, tooling.
+Document: workflow, testing, architecture (overview, guardrails), stack, tooling.
 
 Do not document here: per-SDK implementation depth (comes later as its own pass), API reference, or open deliberations.
 

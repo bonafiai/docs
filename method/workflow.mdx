@@ -3,7 +3,7 @@ title: "Workflow"
 description: "Spec-kit is not the recipes, it's the cookbook's format and the kitchen discipline."
 ---
 
-Spec-kit gives us the recipe format and the kitchen rules. The [architecture pages](/architecture/request) are our base techniques, every feature spec is a recipe written in that format, and nothing leaves the kitchen without passing the taste test (the scenario tests). This page is how the kitchen runs.
+Spec-kit gives us the recipe format and the kitchen rules. The [architecture map](/architecture/overview) is our base layout, every feature spec is a recipe written in that format, and nothing leaves the kitchen without passing the taste test (the scenario tests). This page is how the kitchen runs.
 
 ## Loop
 
@@ -50,7 +50,7 @@ What a feature directory contains when the loop has run:
 
 ## Gates
 
-`/speckit.plan` checks every plan against the constitution before tasks exist: simplicity (no future-proofing), anti-abstraction (use the framework directly), integration-first (contracts and real environments before code). Failing a gate demands written justification. Our project-defined articles point at the architecture pages, so [request](/architecture/request), [events](/architecture/events), and [structure](/architecture/structure) compliance is checked on every plan, and CI enforces the mechanical subset, see [Testing](/concept/testing).
+`/speckit.plan` checks every plan against the constitution before tasks exist: simplicity (no future-proofing), anti-abstraction (use the framework directly), integration-first (contracts and real environments before code). Failing a gate demands written justification. Our project-defined articles live on [Guardrails](/architecture/guardrails), compliance is checked on every plan, and CI enforces the mechanical subset, see [Testing](/method/testing).
 
 ## Scenarios
 
@@ -65,19 +65,9 @@ Scenario: investor sees committed capital balance
 
 Scenario id (like `CAP-001`) goes in the test title. Done means all scenario tests pass.
 
-## Guardrails
+## Rules
 
-The house rules, one line each, the wiring detail lives on the linked page:
-
-- One tenant key everywhere: session claim = database key = permission object.
-- Requests follow one path, slow work goes to the bus, see [Request](/architecture/request).
-- Everything async through one publish contract, replayable at every stage, see [Events](/architecture/events).
-- Modules own their tables, one folder truth, see [Structure](/architecture/structure).
-- Exactly one big JSONB in the system: the raw parse artifact.
-- Truth is written only through the commit path, with its decision record, in one transaction.
-- All LLM calls through one gateway.
-
-These bind in the code repo: spec-kit reads them from `.specify/memory/constitution.md`, CI enforces them as invariant scripts.
+The binding rules live on [Guardrails](/architecture/guardrails). Spec-kit reads them from `.specify/memory/constitution.md`, CI enforces them as invariant scripts.
 
 ## Tracking
 
