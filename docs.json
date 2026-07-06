@@ -20,7 +20,11 @@
       },
       {
         "group": "Architecture",
-        "pages": ["architecture/overview", "architecture/structure"]
+        "pages": [
+          "architecture/structure",
+          "architecture/types",
+          "architecture/jobs"
+        ]
       },
       {
         "group": "Stack",

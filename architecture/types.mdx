@@ -1,0 +1,35 @@
+---
+title: "Types"
+description: "Derive, don't hand-write."
+---
+
+Write the source once, a Drizzle table or a zod schema, and derive the type from it. Never write a type and its schema separately, the type follows the source of truth, never the other way around.
+
+| Name | Description |
+| --- | --- |
+| Table types | `$inferSelect` and `$inferInsert` from the Drizzle tables in `schema.ts`, never written by hand |
+| Input types | Inferred from the zod schema on the route in `router.ts`, one schema validates and types, via `@hono/zod-validator` |
+| Event types | `z.infer` from the zod registry in `shared/` |
+| API types | Flow to the client through Hono RPC, no hand-written DTOs |
+| Domain types | The only hand-written ones, in `types.ts`, only when not derivable |
+
+The pattern end to end:
+
+```ts
+// schema.ts, write the table once
+export const proposals = pgTable('proposals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  status: text('status').notNull(),
+});
+export type Proposal = typeof proposals.$inferSelect;
+
+// router.ts, one schema validates and types
+const createProposal = z.object({ sourceId: z.string().uuid() });
+router.post('/', zValidator('json', createProposal), (c) => {
+  const body = c.req.valid('json'); // typed, no cast
+});
+```
+
+A type two modules need moves to `shared/`, and that is a smell to watch.
+
+Sources: [Drizzle schema declaration](https://orm.drizzle.team/docs/sql-schema-declaration), [zod inference](https://zod.dev/?id=type-inference), [Hono validation](https://hono.dev/docs/guides/validation), [Hono RPC](https://hono.dev/docs/guides/rpc).

@@ -31,19 +31,6 @@ specs/                  feature specs from the loop
 
 A domain folder in `lib/` owns everything for that domain: its logic, its Hono router, its Drizzle tables, its jobs, and its types. New domain, new folder, same shape, per [Hono best practices](https://hono.dev/docs/guides/best-practices): modular sub-routers over one giant app. Every [Inngest function](https://www.inngest.com/docs/features/inngest-functions) lives in the owning module's `jobs/`, one file per job, a thin shell delegating to the domain logic next to it, and a cron is just a job with a [cron trigger](https://www.inngest.com/docs/guides/scheduled-functions), same folder, named for its sweep.
 
-## Types
-
-You do not hand-write types or schemas, you derive them. The type follows the source of truth, never the other way around:
-
-| Name | Description |
-| --- | --- |
-| Table types | Derived from Drizzle, `$inferSelect` and `$inferInsert` in `schema.ts`, never written by hand |
-| Event types | Derived from the zod registry via `z.infer` |
-| API types | Flow to the client through Hono RPC, no hand-written DTOs |
-| Domain types | The only hand-written ones, in `types.ts`, only when not derivable |
-
-Sources: [Drizzle schema declaration](https://orm.drizzle.team/docs/sql-schema-declaration), [zod inference](https://zod.dev/?id=type-inference), [Hono RPC](https://hono.dev/docs/guides/rpc).
-
 ## App
 
 `app/` is routing, nothing else. [Route groups](https://nextjs.org/docs/app/getting-started/project-structure) organize without touching URLs, `_components` and `_lib` colocate route-private code out of the router, and one catch-all hands `/api` to Hono, see [Hono on Vercel](https://hono.dev/docs/getting-started/vercel).

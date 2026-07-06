@@ -33,16 +33,16 @@ This is the spec hub for Bonafi, the source of truth agents and humans build fro
 
 ## Symmetry
 
-In every group the first page orients, the rest you act on. Every page concise, never a mega-page. One-word page names, plain nouns, no metaphors in the sidebar.
+Page names orient, pages act. Every page concise, never a mega-page. One-word page names, plain nouns, no metaphors in the sidebar.
 
-| Group | Orient | Act |
-| --- | --- | --- |
-| Getting started | Introduction | Quickstart |
-| Method | Workflow | Testing |
-| Architecture | Overview | Structure, more planes as they land |
-| Stack | Overview | Tooling |
+| Group | Pages |
+| --- | --- |
+| Getting started | Introduction, Quickstart |
+| Method | Workflow, Testing |
+| Architecture | Structure, Types, Jobs, more as they land |
+| Stack | Overview, Tooling |
 
-A section graduates to its own page when it outgrows a paragraph and the codebase exists to anchor it. Jobs is next.
+The page contract: one concern per page, findable by name. A page ships text, sources, and an artifact (tree, table, or code skeleton), or it does not exist yet.
 
 ## Diagrams
 
@@ -59,7 +59,7 @@ General Mintlify rules:
 
 ## Content boundaries
 
-Document: workflow, testing, architecture (overview, structure, more planes as they land), stack, tooling.
+Document: workflow, testing, architecture (structure, types, jobs, more as they land), stack, tooling.
 
 Do not document here: per-SDK implementation depth (comes later as its own pass), API reference, or open deliberations.
 

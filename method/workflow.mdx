@@ -1,11 +1,9 @@
 ---
 title: "Workflow"
-description: "Spec-kit is not the recipes, it's the cookbook's format and the kitchen discipline."
+description: "Specs first, agents execute, you steer at three points."
 ---
 
-Spec-kit gives us the recipe format and the kitchen rules. The [architecture map](/architecture/overview) is our base layout, every feature spec is a recipe written in that format, and nothing leaves the kitchen without passing the taste test (the scenario tests). This page is how the kitchen runs.
-
-## Loop
+Features are built spec-first: the agent runs the [spec-kit](https://github.com/github/spec-kit) loop, every artifact lands in `specs/NNN-name/`. We do not replicate the tool's docs, this page is only what you act on.
 
 ```mermaid
 flowchart LR
@@ -17,56 +15,40 @@ flowchart LR
   F -.drift.-> A
 ```
 
-The agent runs every `/speckit.*` command. Your job is three touchpoints:
+## Your job
 
-| Name | Description |
-| --- | --- |
-| Describe | What and why in behavior terms, no tech stack. The spec's scenarios must cover what you meant |
-| Answer | The clarify questions, and review the plan: agents are over-eager, catching invented components is your job |
-| Review | The PR with every scenario test green, converge leftovers became Linear issues |
+<Steps>
+  <Step title="Describe">
+    Give the agent what and why in behavior terms, no tech stack. Every scenario binds to one test by its id (like `CAP-001`):
 
-Command reference, artifacts, and process detail live in [spec-kit](https://github.com/github/spec-kit). We deliberately do not replicate them, so nothing here goes stale when the tool updates.
+    ```gherkin
+    Scenario: investor sees committed capital balance
+      Given a parsed capital account statement
+      When the reviewer approves the ending balance proposal
+      Then truth contains the committed metric for that investor
+    ```
 
-## Paths
+    Success: the scenarios in `spec.md` cover what you meant, nothing invented.
+  </Step>
+  <Step title="Answer">
+    The agent asks clarify questions before planning, answer them, then review the plan.
 
-| Name | Description |
-| --- | --- |
-| Full loop | Features: new behavior, multi-file. The whole loop above |
-| Light path | Fixes and tweaks: issue, branch, fix, PR. Existing scenarios cover the regression |
+    Success: no `[NEEDS CLARIFICATION]` left, no components you did not ask for. Agents are over-eager, catching that is your job.
+  </Step>
+  <Step title="Review">
+    The PR.
 
-## Recipe
+    Success: every scenario test green, converge leftovers filed as Linear issues.
+  </Step>
+</Steps>
 
-What a feature directory contains when the loop has run:
+## Path
 
-| Name | Description |
-| --- | --- |
-| `spec.md` | User stories and acceptance scenarios |
-| `plan.md` | Tech choices with rationale, gate results |
-| `research.md` | Library and approach comparisons |
-| `data-model.md` | Entities and schema changes |
-| `contracts/` | API and event contracts |
-| `tasks.md` | The executable task list |
+Features take the full loop above. Fixes and tweaks take the light path: issue, branch, fix, PR, existing scenarios cover the regression.
 
-## Gates
+## Constitution
 
-`/speckit.plan` checks every plan against the constitution before tasks exist: simplicity (no future-proofing), anti-abstraction (use the framework directly), integration-first (contracts and real environments before code). Failing a gate demands written justification. Our project-defined articles live on the [architecture pages](/architecture/overview), compliance is checked on every plan, and CI enforces the mechanical subset, see [Testing](/method/testing).
-
-## Scenarios
-
-Every spec carries acceptance scenarios, each bound to one Playwright test:
-
-```gherkin
-Scenario: investor sees committed capital balance
-  Given a parsed capital account statement
-  When the reviewer approves the ending balance proposal
-  Then truth contains the committed metric for that investor
-```
-
-Scenario id (like `CAP-001`) goes in the test title. Done means all scenario tests pass.
-
-## Rules
-
-The binding rules live on the [architecture pages](/architecture/overview). Spec-kit reads them from `.specify/memory/constitution.md`, CI enforces them as invariant scripts.
+The one artifact that binds us: `.specify/memory/constitution.md` in the code repo matches the [architecture pages](/architecture/structure). The agent checks every plan against it, CI enforces the mechanical subset, see [Testing](/method/testing).
 
 ## Tracking
 
