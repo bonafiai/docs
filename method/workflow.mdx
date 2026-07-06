@@ -9,19 +9,13 @@ Features are built spec-first. The loop starts the moment a [Linear issue](/meth
 
 <Steps>
   <Step title="Describe">
-    Hand the agent the issue, written per [Issues](/method/issues). The agent runs `/speckit.specify` and returns `spec.md` for your review. Every scenario binds to one test by its id (like `CAP-001`).
-
-    Success: the scenarios in `spec.md` cover what you meant, nothing invented.
+    Hand the agent the issue, written per [Issues](/method/issues). It runs `/speckit.specify` and returns `spec.md` for your review, done when the scenarios cover what you meant, nothing invented. Every scenario binds to one test by its id (like `CAP-001`).
   </Step>
   <Step title="Answer">
-    The agent asks clarify questions before planning, answer them, then review the plan.
-
-    Success: no `[NEEDS CLARIFICATION]` left, no components you did not ask for. Agents are over-eager, catching that is your job.
+    The agent asks clarify questions before planning, answer them, then review the plan, done when no `[NEEDS CLARIFICATION]` is left and no components you did not ask for slipped in. Agents are over-eager, catching that is your job.
   </Step>
   <Step title="Review">
-    The PR.
-
-    Success: every scenario test green, converge leftovers filed as Linear issues.
+    The PR, done when every scenario test is green and converge leftovers are filed as new issues.
   </Step>
 </Steps>
 
@@ -33,14 +27,4 @@ Features take the full loop above. Fixes and tweaks take the light path: issue, 
 
 The one artifact that binds us: `.specify/memory/constitution.md` in the code repo matches the [architecture pages](/architecture/structure). The agent checks every plan against it, CI enforces the mechanical subset, see [Testing](/method/testing).
 
-## Tracking
-
-Linear is linked with Cursor for everyone, see [Quickstart](/quickstart).
-
-| Name | Description |
-| --- | --- |
-| Capture | The agent files a Linear issue the moment work is identified, structured per [Issues](/method/issues) |
-| Execute | The agent works the issue spec-first, the human steers in review |
-| Close | The PR links the issue, converge appends leftovers as new issues |
-
-We move fast by creating issues through agents, not by writing tickets by hand.
+The loop runs on issues that agents file and keep current, see [Issues](/method/issues).

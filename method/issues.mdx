@@ -1,32 +1,32 @@
 ---
 title: "Issues"
-description: "The issue structure that starts the loop."
+description: "The unit of work, filed and kept current by agents."
 ---
 
-An issue is the seed of a spec. The agent runs [`/speckit.specify`](https://github.com/github/spec-kit) from it, so the issue carries the what and why in behavior terms, never the how. Human-filed or agent-filed, same shape:
-
-```md
-Title: Reviewer approves proposed values
-
-What: Reviewers approve or reject proposed values from parsed statements.
-Uncertain mappings queue for review, approved proposals become truth.
-
-Why: Truth must be human-approved, unreviewed values cannot enter reports.
-
-Scenarios:
-- Given a parsed statement, when the reviewer approves the ending balance
-  proposal, then truth contains the committed metric for that investor.
-- Given an uncertain mapping, when parsing completes, then it queues for review.
-
-Not now: bulk approval, delegation.
-```
+Agents file and work issues from chat and codebase context, humans hand over intent. We move fast by creating issues through agents, not by writing tickets by hand. The bar every issue clears: any agent can pick it up cold.
 
 | Name | Description |
 | --- | --- |
-| Title | The behavior, not the implementation |
-| What | Behavior terms force the agent to plan the how itself |
-| Why | The value, it becomes the spec's justification |
-| Scenarios | Given/when/then seeds, they become the spec's acceptance scenarios |
-| Not now | Explicit non-scope, the guard against agent over-eagerness |
+| Intent | What and why in behavior terms. For features this becomes the [`/speckit.specify`](https://github.com/github/spec-kit) input |
+| Context | The links a cold agent needs: docs pages, official sources, related issues and PRs, the originating chat |
+| Scope | What this issue is not, the guard against over-eagerness |
 
-The full skeleton is for features, the full loop. Fixes need a title plus one regression line, the light path.
+## Kinds
+
+Not every issue is a feature. The kind decides the path:
+
+| Name | Description |
+| --- | --- |
+| Feature | New behavior, takes the full loop, see [Workflow](/method/workflow) |
+| Fix | Regression or tweak, light path, names the broken scenario |
+| Chore | Dependencies, tooling, docs, no product behavior |
+
+## Lifecycle
+
+| Name | Description |
+| --- | --- |
+| Filed | An agent opens it the moment work is identified, carrying intent, context, and scope |
+| Worked | The agent posts decisions and progress on the issue as they happen, so it never goes stale |
+| Closed | The PR links the issue, leftovers become new issues, scope is never silently dropped |
+
+Done is not the agent saying done, done is the gate, see [Testing](/method/testing).
