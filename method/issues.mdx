@@ -1,0 +1,32 @@
+---
+title: "Issues"
+description: "The issue structure that starts the loop."
+---
+
+An issue is the seed of a spec. The agent runs [`/speckit.specify`](https://github.com/github/spec-kit) from it, so the issue carries the what and why in behavior terms, never the how. Human-filed or agent-filed, same shape:
+
+```md
+Title: Reviewer approves proposed values
+
+What: Reviewers approve or reject proposed values from parsed statements.
+Uncertain mappings queue for review, approved proposals become truth.
+
+Why: Truth must be human-approved, unreviewed values cannot enter reports.
+
+Scenarios:
+- Given a parsed statement, when the reviewer approves the ending balance
+  proposal, then truth contains the committed metric for that investor.
+- Given an uncertain mapping, when parsing completes, then it queues for review.
+
+Not now: bulk approval, delegation.
+```
+
+| Name | Description |
+| --- | --- |
+| Title | The behavior, not the implementation |
+| What | Behavior terms force the agent to plan the how itself |
+| Why | The value, it becomes the spec's justification |
+| Scenarios | Given/when/then seeds, they become the spec's acceptance scenarios |
+| Not now | Explicit non-scope, the guard against agent over-eagerness |
+
+The full skeleton is for features, the full loop. Fixes need a title plus one regression line, the light path.

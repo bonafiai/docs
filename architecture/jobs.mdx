@@ -3,29 +3,7 @@ title: "Jobs"
 description: "One canonical shape for everything async."
 ---
 
-Every job is an [Inngest function](https://www.inngest.com/docs/features/inngest-functions) in the owning module's `jobs/`, one file per job, a thin shell delegating to the domain logic next to it. A cron is just a job with a [cron trigger](https://www.inngest.com/docs/guides/scheduled-functions), named for its sweep. Events are named `noun.verb`, past tense: `source.uploaded`, `proposal.committed`. Same shape every time.
-
-| Name | Description |
-| --- | --- |
-| Trigger | Exactly one event, or a cron |
-| Shell | Thin Inngest function delegating to the domain module |
-| Concurrency | [Keyed](https://www.inngest.com/docs/guides/concurrency) by org plus entity, no cross-tenant races |
-| Stance | One of the three idempotency stances below |
-| Completion | Emits exactly one event when done |
-
-## Stances
-
-Pick one per job, write it in the spec:
-
-| Name | Description |
-| --- | --- |
-| Recompute | Safe to re-run, rebuilds its output from persisted input |
-| Keyed | Serialized per entity by the concurrency key, re-runs allowed |
-| Re-runnable | Re-processing is the feature, like re-parsing a source |
-
-## Shape
-
-The canonical skeleton, every job looks like this:
+Every job is an [Inngest function](https://www.inngest.com/docs/features/inngest-functions) in the owning module's `jobs/`, one file per job, a thin shell delegating to the domain logic next to it. A cron is just a job with a [cron trigger](https://www.inngest.com/docs/guides/scheduled-functions), named for its sweep. Events are named `noun.verb`, past tense: `source.uploaded`, `proposal.committed`. Same shape every time:
 
 ```ts
 export const remapHeldFacts = inngest.createFunction(
@@ -41,3 +19,21 @@ export const remapHeldFacts = inngest.createFunction(
   },
 );
 ```
+
+| Name | Description |
+| --- | --- |
+| Trigger | Exactly one event, or a cron |
+| Shell | Delegates to the domain module, no logic in the shell |
+| Concurrency | [Keyed](https://www.inngest.com/docs/guides/concurrency) by org plus entity, no cross-tenant races |
+| Stance | One of the three idempotency stances below |
+| Completion | Emits exactly one event when done |
+
+## Stances
+
+Pick one per job, write it in the spec:
+
+| Name | Description |
+| --- | --- |
+| Recompute | Safe to re-run, rebuilds its output from persisted input |
+| Keyed | Serialized per entity by the concurrency key, re-runs allowed |
+| Re-runnable | Re-processing is the feature, like re-parsing a source |

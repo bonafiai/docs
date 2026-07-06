@@ -32,6 +32,8 @@ This is the spec hub for Bonafi, the source of truth agents and humans build fro
 11. **Source, don't replicate.** External tool detail lives in the tool's own docs, linked once. Our pages carry only what is ours: decisions, touchpoints, house rules. Replicated docs go stale, links don't.
 12. **Future present.** Document what is, never history or war stories.
 13. **Inline sources.** Link the official doc on the word in context. No Sources footers.
+14. **Artifact first.** Opener states the rule of the page in 1-2 sentences, the artifact (tree, skeleton, code shape) follows immediately, no scrolling. Tables and sections after, explaining only what the artifact cannot say itself.
+15. **One fact, one place.** A rule lives in the artifact's annotation, or a table row, or prose, never two of them. Whoever states it best keeps it.
 
 ## Symmetry
 
@@ -40,7 +42,7 @@ Page names orient, pages act. Every page concise, never a mega-page. One-word pa
 | Group | Pages |
 | --- | --- |
 | Getting started | Introduction, Quickstart |
-| Method | Workflow, Testing |
+| Method | Workflow, Issues, Testing |
 | Architecture | Structure, Types, Jobs, more as they land |
 | Stack | Overview, Tooling |
 
@@ -61,7 +63,7 @@ General Mintlify rules:
 
 ## Content boundaries
 
-Document: workflow, testing, architecture (structure, types, jobs, more as they land), stack, tooling.
+Document: workflow, issues, testing, architecture (structure, types, jobs, more as they land), stack, tooling.
 
 Do not document here: per-SDK implementation depth (comes later as its own pass), API reference, or open deliberations.
 

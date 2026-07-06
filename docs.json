@@ -16,7 +16,7 @@
       },
       {
         "group": "Method",
-        "pages": ["method/workflow", "method/testing"]
+        "pages": ["method/workflow", "method/issues", "method/testing"]
       },
       {
         "group": "Architecture",
