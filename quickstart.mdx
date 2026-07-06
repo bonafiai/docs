@@ -3,8 +3,6 @@ title: "Quickstart"
 description: "From a blank machine to a running app."
 ---
 
-Everything from a blank Mac to the app running locally. Follow top to bottom, each step tells you what success looks like.
-
 ## Install the tools
 
 <Steps>
@@ -37,6 +35,8 @@ Everything from a blank Mac to the app running locally. Follow top to bottom, ea
 </Steps>
 
 ## Run the app
+
+These steps apply after the monorepo is scaffolded to the [Structure](/architecture/structure) shape.
 
 <Steps>
   <Step title="Clone">
@@ -72,13 +72,13 @@ Everything from a blank Mac to the app running locally. Follow top to bottom, ea
     bun run dev
     ```
 
-    Success: the app on `http://localhost:3000` and the Inngest dev server running next to it.
+    Success: the app on `http://localhost:3024` (microfrontends proxy) and the Inngest dev server running next to it.
   </Step>
 </Steps>
 
 ## Connect Cursor
 
-Open the repo in Cursor. The MCP servers (Mintlify, Linear) are preconfigured in `.cursor/mcp.json`, Cursor lists them automatically. When prompted, approve the Linear OAuth in your browser. The spec-kit `/speckit.*` commands ship in the repo too, so they are in chat right away with no install, see [Tooling](/stack/tooling). That is the whole setup: agents create issues and run the loop.
+Open the repo in Cursor. MCP servers are in `.cursor/mcp.json`; approve Linear OAuth when prompted. Spec-kit `/speckit.*` commands ship in the repo.
 
 ## Run the docs site
 
@@ -92,15 +92,6 @@ Success: this site on `http://localhost:3000`. Validate changes with `npx mint v
 ## Explore
 
 <Columns cols={2}>
-  <Card title="Issues" icon="list-checks" href="/method/issues">
-    The Linear issue that starts the loop.
-  </Card>
-  <Card title="Workflow" icon="arrows-clockwise" href="/method/workflow">
-    Spec-driven development and the Linear loop.
-  </Card>
-  <Card title="Testing" icon="check-circle" href="/method/testing">
-    The commands you run and the CI gate.
-  </Card>
   <Card title="Structure" icon="folder-tree" href="/architecture/structure">
     Where every file lives, and why.
   </Card>
@@ -109,11 +100,5 @@ Success: this site on `http://localhost:3000`. Validate changes with `npx mint v
   </Card>
   <Card title="Jobs" icon="gears" href="/architecture/jobs">
     One canonical shape for everything async.
-  </Card>
-  <Card title="Overview" icon="stack" href="/stack/overview">
-    Our technology choices.
-  </Card>
-  <Card title="Tooling" icon="wrench" href="/stack/tooling">
-    MCP servers, skills, and spec-kit commands.
   </Card>
 </Columns>
