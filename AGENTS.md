@@ -30,6 +30,8 @@ This is the spec hub for Bonafi, the source of truth agents and humans build fro
 9. **Card grids.** Navigation moments only (`index`, `quickstart`).
 10. **Cut process narration, keep doctrine.** Cut what tools do on their own. Keep explicit what a colleague would otherwise do wrong: derived types, placement, boundaries.
 11. **Source, don't replicate.** External tool detail lives in the tool's own docs, linked once. Our pages carry only what is ours: decisions, touchpoints, house rules. Replicated docs go stale, links don't.
+12. **Future present.** Document what is, never history or war stories.
+13. **Inline sources.** Link the official doc on the word in context. No Sources footers.
 
 ## Symmetry
 

@@ -3,13 +3,13 @@ title: "Jobs"
 description: "One canonical shape for everything async."
 ---
 
-Every job lives in the owning module's `jobs/`, one file per job, a thin shell delegating to the domain logic next to it. A cron is just a job with a cron trigger, named for its sweep. Events are named `noun.verb`, past tense: `source.uploaded`, `proposal.committed`. Same shape every time, that is what keeps sixty jobs from becoming a pipeline nobody can replay.
+Every job is an [Inngest function](https://www.inngest.com/docs/features/inngest-functions) in the owning module's `jobs/`, one file per job, a thin shell delegating to the domain logic next to it. A cron is just a job with a [cron trigger](https://www.inngest.com/docs/guides/scheduled-functions), named for its sweep. Events are named `noun.verb`, past tense: `source.uploaded`, `proposal.committed`. Same shape every time.
 
 | Name | Description |
 | --- | --- |
 | Trigger | Exactly one event, or a cron |
 | Shell | Thin Inngest function delegating to the domain module |
-| Concurrency | Keyed by org plus entity, no cross-tenant races |
+| Concurrency | [Keyed](https://www.inngest.com/docs/guides/concurrency) by org plus entity, no cross-tenant races |
 | Stance | One of the three idempotency stances below |
 | Completion | Emits exactly one event when done |
 
@@ -41,5 +41,3 @@ export const remapHeldFacts = inngest.createFunction(
   },
 );
 ```
-
-Sources: [Inngest functions](https://www.inngest.com/docs/features/inngest-functions), [concurrency](https://www.inngest.com/docs/guides/concurrency), [crons](https://www.inngest.com/docs/guides/scheduled-functions).

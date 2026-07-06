@@ -3,23 +3,13 @@ title: "Workflow"
 description: "Specs first, agents execute, you steer at three points."
 ---
 
-Features are built spec-first: the agent runs the [spec-kit](https://github.com/github/spec-kit) loop, every artifact lands in `specs/NNN-name/`. We do not replicate the tool's docs, this page is only what you act on.
-
-```mermaid
-flowchart LR
-  A[Specify] --> B[Clarify]
-  B --> C[Plan]
-  C --> D[Tasks]
-  D --> E[Implement]
-  E --> F[Converge]
-  F -.drift.-> A
-```
+Features are built spec-first. The loop starts the moment a Linear issue is handed to an agent in Cursor: the agent runs the [spec-kit](https://github.com/github/spec-kit) loop, every artifact lands in `specs/NNN-name/`, and it comes back to you at three points. We do not replicate the tool's docs, this page is only what you act on.
 
 ## Your job
 
 <Steps>
   <Step title="Describe">
-    Give the agent what and why in behavior terms, no tech stack. Every scenario binds to one test by its id (like `CAP-001`):
+    Hand the agent the issue and describe the what and why in behavior terms, no tech stack. The agent runs `/speckit.specify` and returns `spec.md` for your review. Every scenario binds to one test by its id (like `CAP-001`):
 
     ```gherkin
     Scenario: investor sees committed capital balance
