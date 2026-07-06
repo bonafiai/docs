@@ -1,19 +1,25 @@
 ---
 title: "Introduction"
-description: "Bonafi turns financial documents into structured, auditable truth."
+description: "Turborepo monorepo, modular monolith, spec-driven."
 ---
 
-Bonafi is a financial document platform. Teams ingest statements, notices, and reports, the system parses them, proposes values, and routes uncertain mappings through review. Approved proposals become truth: metrics, entities, and relationships your portfolio can query.
+A [Turborepo](https://turborepo.dev/docs/guides/frameworks/nextjs) monorepo, modular monolith in TypeScript. Two Next.js apps (`apps/web`, `apps/test`) share `packages/ui` and a root `lib/` of Hono routers, Drizzle schemas, and Inngest jobs. [Spec-kit](https://github.com/github/spec-kit) drives every feature; this site is the constitution: the structure, types, and guardrails every feature is built on.
 
-## How we operate
+## Navigate
 
-We move quick and accurate. Every tool sits behind a seam, so we pivot to anything better in no time: LlamaParse parses today, Reducto is on the radar, same contract either way. Found something faster or better? Say it. Pro-activeness is expected, not appreciated.
+Start with [Quickstart](/quickstart), then [Structure](/architecture/structure) for the repo tree and guardrails.
 
 <Columns cols={2}>
   <Card title="Quickstart" icon="rocket" href="/quickstart">
     Blank machine to running app, one page.
   </Card>
-  <Card title="Workflow" icon="arrows-clockwise" href="/method/workflow">
-    How features get built: specs first, agents execute, tests verify.
+  <Card title="Structure" icon="folder-tree" href="/architecture/structure">
+    The monorepo tree: apps, packages, lib.
+  </Card>
+  <Card title="Types" icon="brackets-curly" href="/architecture/types">
+    Derive, don't hand-write.
+  </Card>
+  <Card title="Jobs" icon="gears" href="/architecture/jobs">
+    One canonical shape for everything async.
   </Card>
 </Columns>

@@ -2,7 +2,7 @@
 
 ## About this project
 
-This is the spec hub for Bonafi, the source of truth agents and humans build from. Code lives in [bonafiai/mono](https://github.com/bonafiai/mono). This repo holds the workflow, testing doctrine, stack choices, and tooling rosters.
+This is the spec hub for Bonafi, the source of truth agents and humans build from. Code lives in [bonafiai/mono](https://github.com/bonafiai/mono). This repo holds the architecture doctrine (structure, types, jobs, more as they land).
 
 - Pages are MDX with YAML frontmatter
 - Configuration lives in `docs.json`
@@ -42,9 +42,7 @@ Page names orient, pages act. Every page concise, never a mega-page. One-word pa
 | Group | Pages |
 | --- | --- |
 | Getting started | Introduction, Quickstart |
-| Method | Workflow, Issues, Testing |
 | Architecture | Structure, Types, Jobs, more as they land |
-| Stack | Overview, Tooling |
 
 The page contract: one concern per page, findable by name. A page ships text, sources, and an artifact (tree, table, or code skeleton), or it does not exist yet.
 
@@ -58,13 +56,11 @@ General Mintlify rules:
 
 - Second person, active voice, sentence case headings
 - Every code block has a language tag
-- Internal links: root-relative, no file extension (`/method/workflow`)
+- Internal links: root-relative, no file extension (`/architecture/structure`)
 - All images need descriptive alt text
 
 ## Content boundaries
 
-Document: workflow, issues, testing, architecture (structure, types, jobs, more as they land), stack, tooling.
+Document: architecture (structure, types, jobs, more as they land).
 
 Do not document here: per-SDK implementation depth (comes later as its own pass), API reference, or open deliberations.
-
-Roster table Names link to the exact official docs of the tool.

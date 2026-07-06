@@ -15,20 +15,12 @@
         "pages": ["index", "quickstart"]
       },
       {
-        "group": "Method",
-        "pages": ["method/issues", "method/workflow", "method/testing"]
-      },
-      {
         "group": "Architecture",
         "pages": [
           "architecture/structure",
           "architecture/types",
           "architecture/jobs"
         ]
-      },
-      {
-        "group": "Stack",
-        "pages": ["stack/overview", "stack/tooling"]
       }
     ],
     "global": {
