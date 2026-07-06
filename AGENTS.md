@@ -28,6 +28,8 @@ This is the spec hub for Bonafi, the source of truth agents and humans build fro
 7. **Definitive tone.** Everything documented is the current truth. No "might", no open deliberations, decisions happen in Slack and Linear.
 8. **Callouts.** One per page max, genuine traps only.
 9. **Card grids.** Navigation moments only (`index`, `quickstart`).
+10. **Cut process narration, keep doctrine.** Cut what tools do on their own. Keep explicit what a colleague would otherwise do wrong: derived types, placement, boundaries.
+11. **Source, don't replicate.** External tool detail lives in the tool's own docs, linked once. Our pages carry only what is ours: decisions, touchpoints, house rules. Replicated docs go stale, links don't.
 
 ## Symmetry
 
@@ -36,9 +38,11 @@ In every group the first page orients, the rest you act on. Every page concise, 
 | Group | Orient | Act |
 | --- | --- | --- |
 | Getting started | Introduction | Quickstart |
-| Method | Workflow | Commands, Testing |
+| Method | Workflow | Testing |
 | Architecture | Overview | Structure, more planes as they land |
 | Stack | Overview | Tooling |
+
+A section graduates to its own page when it outgrows a paragraph and the codebase exists to anchor it. Jobs is next.
 
 ## Diagrams
 
@@ -55,7 +59,7 @@ General Mintlify rules:
 
 ## Content boundaries
 
-Document: workflow, commands, testing, architecture (overview, structure, more planes as they land), stack, tooling.
+Document: workflow, testing, architecture (overview, structure, more planes as they land), stack, tooling.
 
 Do not document here: per-SDK implementation depth (comes later as its own pass), API reference, or open deliberations.
 

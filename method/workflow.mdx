@@ -17,7 +17,15 @@ flowchart LR
   F -.drift.-> A
 ```
 
-The agent runs the loop. Your three touchpoints: intent in, answers in the middle, review at the end, see [Commands](/method/commands) for what you say and check per step.
+The agent runs every `/speckit.*` command. Your job is three touchpoints:
+
+| Name | Description |
+| --- | --- |
+| Describe | What and why in behavior terms, no tech stack. The spec's scenarios must cover what you meant |
+| Answer | The clarify questions, and review the plan: agents are over-eager, catching invented components is your job |
+| Review | The PR with every scenario test green, converge leftovers became Linear issues |
+
+Command reference, artifacts, and process detail live in [spec-kit](https://github.com/github/spec-kit). We deliberately do not replicate them, so nothing here goes stale when the tool updates.
 
 ## Paths
 

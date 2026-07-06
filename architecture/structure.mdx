@@ -3,60 +3,51 @@ title: "Structure"
 description: "Where every file lives, and why."
 ---
 
-One app, one deploy, hard module boundaries. Every feature lands in the same shape, so anyone (human or agent) knows where things live without asking. This is the tree, the sections below say why each zone exists.
+One app, one deploy, hard module boundaries. Every feature lands in the same shape, so anyone (human or agent) knows where things live without asking. The tree is the recipe, the same shape for every module:
 
 ```text
-app/                  routes only, no business logic
-  (app)/              route group, the authenticated product
-    review/
+app/                    routes only, no business logic
+  (app)/                route group, the authenticated product
+    <feature>/
       page.tsx
-      _components/    UI private to this route
-      _lib/           helpers private to this route
+      _components/      UI private to this route
+      _lib/             helpers private to this route
   api/
-    [[...route]]/     one catch-all, Hono owns /api
-  layout.tsx
-lib/                  all business logic, one folder per domain
-  sources/
-    router.ts         its Hono routes
-    schema.ts         its Drizzle tables
-    types.ts          hand-written domain types only
-    jobs/             its Inngest functions, crons included
-    parse.ts          its domain logic
-  shared/             events registry, tenant db, gateway client
-proxy.ts              the edge session gate
-specs/                feature specs from the loop
-.specify/             spec-kit memory, the constitution
+    [[...route]]/       one catch-all, Hono owns /api
+lib/
+  <module>/             one folder per domain, same shape every time
+    router.ts           its Hono routes, mounted by the catch-all
+    schema.ts           its Drizzle tables, types derived, not written
+    types.ts            hand-written domain types, only if not derivable
+    jobs/               its Inngest functions, one file per job, crons included
+    <domain>.ts         its domain logic, the fat part
+  shared/               events registry, tenant db, gateway client
+proxy.ts                the edge session gate
+specs/                  feature specs from the loop
+.specify/               spec-kit memory, the constitution
 ```
 
 ## Modules
 
-A domain folder in `lib/` owns its logic, router, jobs, tables, and types. Modules talk through exported functions and events, never another module's tables. New domain, new folder, same shape, per [Hono best practices](https://hono.dev/docs/guides/best-practices): modular sub-routers over one giant app.
+A domain folder in `lib/` owns everything for that domain: its logic, its Hono router, its Drizzle tables, its jobs, and its types. New domain, new folder, same shape, per [Hono best practices](https://hono.dev/docs/guides/best-practices): modular sub-routers over one giant app. Every [Inngest function](https://www.inngest.com/docs/features/inngest-functions) lives in the owning module's `jobs/`, one file per job, a thin shell delegating to the domain logic next to it, and a cron is just a job with a [cron trigger](https://www.inngest.com/docs/guides/scheduled-functions), same folder, named for its sweep.
 
 ## Types
 
-Derive, don't hand-write. Table types come from Drizzle (`$inferSelect`, `$inferInsert`) and live in `schema.ts`, see [schema declaration](https://orm.drizzle.team/docs/sql-schema-declaration). Event types come from the zod registry via [inference](https://zod.dev/?id=type-inference). API types flow to the client through [Hono RPC](https://hono.dev/docs/guides/rpc), no hand-written DTOs. `types.ts` holds only domain types that cannot be derived. A type needed by two modules moves to `shared/`, and that is a smell to watch.
-
-## Jobs
-
-Every [Inngest function](https://www.inngest.com/docs/features/inngest-functions) lives in the owning module's `jobs/`, one file per job, thin shell delegating to domain logic. A cron is just a job with a [cron trigger](https://www.inngest.com/docs/guides/scheduled-functions), same folder, named for its sweep. All jobs register on the single serve handler in the catch-all.
-
-## App
-
-`app/` is routing, nothing else. [Route groups](https://nextjs.org/docs/app/getting-started/project-structure) organize without touching URLs, `_components` and `_lib` are private folders that colocate route-private code out of the router, and one catch-all hands `/api` to Hono, see [Hono on Vercel](https://hono.dev/docs/getting-started/vercel).
-
-## Shared
-
-Three residents: the event registry, the tenant transaction, the gateway client. Small on purpose, growth means something is misplaced.
-
-## Placement
-
-When in doubt, this is where it goes:
+You do not hand-write types or schemas, you derive them. The type follows the source of truth, never the other way around:
 
 | Name | Description |
 | --- | --- |
-| A route | `lib/<module>/router.ts`, mounted by the catch-all |
-| A table | `lib/<module>/schema.ts`, types derived, not written |
-| A job or cron | `lib/<module>/jobs/`, one file, thin shell |
-| A domain type | `lib/<module>/types.ts`, only if not derivable |
-| Route-private UI | `app/.../_components/`, colocated |
-| Anything two modules need | `shared/`, and question it |
+| Table types | Derived from Drizzle, `$inferSelect` and `$inferInsert` in `schema.ts`, never written by hand |
+| Event types | Derived from the zod registry via `z.infer` |
+| API types | Flow to the client through Hono RPC, no hand-written DTOs |
+| Domain types | The only hand-written ones, in `types.ts`, only when not derivable |
+
+Sources: [Drizzle schema declaration](https://orm.drizzle.team/docs/sql-schema-declaration), [zod inference](https://zod.dev/?id=type-inference), [Hono RPC](https://hono.dev/docs/guides/rpc).
+
+## App
+
+`app/` is routing, nothing else. [Route groups](https://nextjs.org/docs/app/getting-started/project-structure) organize without touching URLs, `_components` and `_lib` colocate route-private code out of the router, and one catch-all hands `/api` to Hono, see [Hono on Vercel](https://hono.dev/docs/getting-started/vercel).
+
+## Boundaries
+
+Modules talk through exported functions and events, never another module's tables. `shared/` has three residents, the event registry, the tenant transaction, and the gateway client, and it stays that small on purpose: growth means something is misplaced. A type two modules need moves there, and that is a smell to watch.
