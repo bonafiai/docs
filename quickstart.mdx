@@ -1,47 +1,119 @@
 ---
 title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+description: "From a blank machine to a running app."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
+Everything from a blank Mac to the app running locally. Follow top to bottom, each step tells you what success looks like.
 
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+## Install the tools
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Homebrew">
+    Paste in your terminal ([docs.brew.sh](https://docs.brew.sh/Installation)):
 
     ```bash
-    npm install your-package
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     ```
+
+    Success: `brew --version` prints a version number.
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+  <Step title="Toolbelt">
+    One command installs everything:
 
     ```bash
-    your-cli init
+    brew install gh node oven-sh/bun/bun planetscale/tap/pscale
     ```
+
+    That is GitHub CLI, Node, Bun, and the PlanetScale CLI.
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
-
+  <Step title="Sign in">
     ```bash
-    your-cli start
+    gh auth login
+    pscale auth login
     ```
+
+    Each opens a browser, approve, done. Also install [Cursor](https://cursor.com) if you have not.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Run the app
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+<Steps>
+  <Step title="Clone">
+    ```bash
+    gh repo clone bonafiai/mono
+    gh repo clone bonafiai/docs
+    ```
+
+    **mono** is the application, **docs** is this site.
+  </Step>
+  <Step title="Configure">
+    ```bash
+    cd mono
+    bun install
+    cp .env.example .env.local
+    ```
+
+    Fill the required values in `.env.local`.
+  </Step>
+  <Step title="Database">
+    Your own dev branch, real PlanetScale Postgres, mirrors prod:
+
+    ```bash
+    pscale branch switch <your-name> --database bonafi --create
+    bun run db:migrate
+    bun run dev:seed
+    ```
+
+    Point `DATABASE_URL` in `.env.local` at the branch connection string. Offline fallback: `bun run dev:db:up` starts a local container.
+  </Step>
+  <Step title="Run">
+    ```bash
+    bun run dev
+    ```
+
+    Success: the app on `http://localhost:3000` and the Inngest dev server running next to it.
+  </Step>
+</Steps>
+
+## Connect Cursor
+
+Open the repo in Cursor. The MCP servers (Mintlify, Linear) are preconfigured in `.cursor/mcp.json`, Cursor lists them automatically. When prompted, approve the Linear OAuth in your browser. The spec-kit `/speckit.*` commands ship in the repo too, so they are in chat right away with no install, see [Tooling](/stack/tooling). That is the whole setup: agents create issues and run the loop.
+
+## Run the docs site
+
+```bash
+cd docs
+npx mint dev
+```
+
+Success: this site on `http://localhost:3000`. Validate changes with `npx mint validate`.
+
+## Explore
+
+<Columns cols={2}>
+  <Card title="Issues" icon="list-checks" href="/method/issues">
+    The Linear issue that starts the loop.
+  </Card>
+  <Card title="Workflow" icon="arrows-clockwise" href="/method/workflow">
+    Spec-driven development and the Linear loop.
+  </Card>
+  <Card title="Testing" icon="check-circle" href="/method/testing">
+    The commands you run and the CI gate.
+  </Card>
+  <Card title="Structure" icon="folder-tree" href="/architecture/structure">
+    Where every file lives, and why.
+  </Card>
+  <Card title="Types" icon="brackets-curly" href="/architecture/types">
+    Derive, don't hand-write.
+  </Card>
+  <Card title="Jobs" icon="gears" href="/architecture/jobs">
+    One canonical shape for everything async.
+  </Card>
+  <Card title="Overview" icon="stack" href="/stack/overview">
+    Our technology choices.
+  </Card>
+  <Card title="Tooling" icon="wrench" href="/stack/tooling">
+    MCP servers, skills, and spec-kit commands.
+  </Card>
+</Columns>

@@ -1,0 +1,39 @@
+---
+title: "Structure"
+description: "Where every file lives, and why."
+---
+
+One app, one deploy, hard module boundaries. Every feature lands in the same shape, so anyone (human or agent) knows where things live without asking. Two trees: `app/` for Next.js routing, `lib/` for the Hono domain modules.
+
+## App
+
+```text
+app/                    routes only, no business logic
+  (app)/                route group, the authenticated product
+    <feature>/
+      page.tsx
+      _components/      UI private to this route
+      _lib/             helpers private to this route
+  api/
+    [[...route]]/       one catch-all, Hono owns /api
+proxy.ts                the edge session gate
+```
+
+`app/` is routing, nothing else. Route groups organize without touching URLs, `_components` and `_lib` colocate route-private code out of the router, and one catch-all hands `/api` to Hono. `proxy.ts` gates every request at the edge before it reaches a route, and Hono trusts the session it already validated.
+
+## Modules
+
+```text
+lib/
+  <module>/             one folder per domain, same shape every time
+    router.ts           its Hono routes, mounted by the catch-all
+    schema.ts           its Drizzle tables, types derived, not written
+    types.ts            hand-written domain types, only if not derivable
+    jobs/               its Inngest functions, one file per job, crons included
+    <domain>.ts         its domain logic, the fat part
+  shared/               events registry, tenant db, gateway client
+```
+
+A domain folder in `lib/` owns its logic, router, schema, jobs, and types, same shape every module, so a new domain is a new folder. Its jobs live in `jobs/`, see [Jobs](/architecture/jobs) for the canonical shape. Modules talk through exported functions and events, never another module's tables; `shared/` holds the event registry, the tenant transaction, and the gateway client, and stays that small on purpose. A type two modules need moves to `shared/`, and that is a smell to watch.
+
+At the root, `specs/` holds the feature specs from the loop and `.specify/` holds spec-kit memory. These pages are the constitution in human form, transcribed into `.specify/memory/constitution.md`: the agent gates every plan against it, and CI enforces the mechanical subset, see [Testing](/method/testing).

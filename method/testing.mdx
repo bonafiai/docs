@@ -1,0 +1,25 @@
+---
+title: "Testing"
+description: "The commands you run and the gate your PR passes."
+---
+
+A feature is done when its scenario tests pass, not when the agent says so. Run these locally, CI runs the same, green locally means green in the gate.
+
+## Commands
+
+| Name | Description |
+| --- | --- |
+| `bun run lint` | oxlint, prettier, and the invariant scripts (truth-write guard, spec-reference, scenario-coverage) |
+| `bun run typecheck` | `tsc`, no emit |
+| `bun run test` | Vitest, unit plus integration (integration needs the dev database) |
+| `bunx playwright test` | Acceptance, one test per spec scenario, the proof the agent built the behavior |
+
+Before every push: `bun run lint && bun run typecheck && bun run test`.
+
+## Gate
+
+Every PR runs the same commands as required checks, all deterministic, all key-free.
+
+<Warning>
+The gate does not grow by default. A new check needs a written reason.
+</Warning>

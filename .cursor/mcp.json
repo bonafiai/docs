@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mintlify": {
+      "url": "https://mcp.mintlify.com"
+    },
+    "linear": {
+      "url": "https://mcp.linear.app/mcp"
+    }
+  }
+}
