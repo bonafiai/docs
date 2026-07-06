@@ -78,7 +78,7 @@ Everything from a blank Mac to the app running locally. Follow top to bottom, ea
 
 ## Connect Cursor
 
-Open the repo in Cursor. The MCP servers (Mintlify, Linear) are preconfigured in `.cursor/mcp.json`, Cursor lists them automatically. When prompted, approve the Linear OAuth in your browser, that is the whole setup. Agents can now create and update issues, see [Workflow](/method/workflow).
+Open the repo in Cursor. The MCP servers (Mintlify, Linear) are preconfigured in `.cursor/mcp.json`, Cursor lists them automatically. When prompted, approve the Linear OAuth in your browser. The spec-kit `/speckit.*` commands ship in the repo too, so they are in chat right away with no install, see [Tooling](/stack/tooling). That is the whole setup: agents create issues and run the loop.
 
 ## Run the docs site
 
@@ -92,11 +92,11 @@ Success: this site on `http://localhost:3000`. Validate changes with `npx mint v
 ## Explore
 
 <Columns cols={2}>
+  <Card title="Issues" icon="list-checks" href="/method/issues">
+    The Linear issue that starts the loop.
+  </Card>
   <Card title="Workflow" icon="arrows-clockwise" href="/method/workflow">
     Spec-driven development and the Linear loop.
-  </Card>
-  <Card title="Issues" icon="list-checks" href="/method/issues">
-    The issue structure that starts the loop.
   </Card>
   <Card title="Testing" icon="check-circle" href="/method/testing">
     The commands you run and the CI gate.
@@ -114,6 +114,6 @@ Success: this site on `http://localhost:3000`. Validate changes with `npx mint v
     Our technology choices.
   </Card>
   <Card title="Tooling" icon="wrench" href="/stack/tooling">
-    MCP servers, skills, and dependencies.
+    MCP servers, skills, and spec-kit commands.
   </Card>
 </Columns>

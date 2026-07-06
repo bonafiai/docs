@@ -3,19 +3,19 @@ title: "Workflow"
 description: "Specs first, agents execute, you steer at three points."
 ---
 
-Features are built spec-first. The loop starts the moment a [Linear issue](/method/issues) is handed to an agent in Cursor: the agent runs the [spec-kit](https://github.com/github/spec-kit) loop, every artifact lands in `specs/NNN-name/`, and it comes back to you at three points. We do not replicate the tool's docs, this page is only what you act on.
+Features are built spec-first. The loop starts the moment a [Linear issue](/method/issues) is handed to an agent in Cursor: the agent runs the [spec-kit](https://github.com/github/spec-kit) loop, every artifact lands in `specs/NNN-name/`, and it comes back to you at three points.
 
 ## Your job
 
 <Steps>
   <Step title="Describe">
-    Hand the agent the issue, written per [Issues](/method/issues). It runs `/speckit.specify` and returns `spec.md` for your review, done when the scenarios cover what you meant, nothing invented. Every scenario binds to one test by its id (like `CAP-001`).
+    Hand the agent the [issue](/method/issues). It runs `/speckit.specify` first, required by the [contract](/stack/tooling), and returns `spec.md`. Done when the scenarios cover what you meant, nothing invented.
   </Step>
   <Step title="Answer">
-    The agent asks clarify questions before planning, answer them, then review the plan, done when no `[NEEDS CLARIFICATION]` is left and no components you did not ask for slipped in. Agents are over-eager, catching that is your job.
+    Answer the agent's clarify questions, then review the plan against the [constitution](/architecture/structure). Done when no `[NEEDS CLARIFICATION]` remains and nothing you did not ask for slipped in. Agents are over-eager, catching that is your job.
   </Step>
   <Step title="Review">
-    The PR, done when every scenario test is green and converge leftovers are filed as new issues.
+    Review the PR. Done when every scenario test is green and converge leftovers are filed as new issues.
   </Step>
 </Steps>
 
@@ -23,8 +23,4 @@ Features are built spec-first. The loop starts the moment a [Linear issue](/meth
 
 Features take the full loop above. Fixes and tweaks take the light path: issue, branch, fix, PR, existing scenarios cover the regression.
 
-## Constitution
-
-The one artifact that binds us: `.specify/memory/constitution.md` in the code repo matches the [architecture pages](/architecture/structure). The agent checks every plan against it, CI enforces the mechanical subset, see [Testing](/method/testing).
-
-The loop runs on issues that agents file and keep current, see [Issues](/method/issues).
+Done is not the agent saying done, done is the gate, see [Testing](/method/testing).

@@ -23,9 +23,7 @@ router.post('/', zValidator('json', createProposal), (c) => {
 | Name | Description |
 | --- | --- |
 | Table types | `$inferSelect` and `$inferInsert` from the [Drizzle tables](https://orm.drizzle.team/docs/sql-schema-declaration) in `schema.ts`, never written by hand |
-| Input types | Inferred from the zod schema on the route in `router.ts`, one schema validates and types, via [`@hono/zod-validator`](https://hono.dev/docs/guides/validation) |
-| Event types | [`z.infer`](https://zod.dev/?id=type-inference) from the zod registry in `shared/` |
+| Input types | Inferred from the zod schema on the route in `router.ts`, one schema validates and types, via [`@hono/zod-validator`](https://hono.dev/docs/guides/validation#zod-validator-middleware) |
+| Event types | [`z.infer`](https://zod.dev/basics#inferring-types) from the zod registry in `shared/` |
 | API types | Flow to the client through [Hono RPC](https://hono.dev/docs/guides/rpc), no hand-written DTOs |
 | Domain types | The only hand-written ones, in `types.ts`, only when not derivable |
-
-A type two modules need moves to `shared/`, and that is a smell to watch.

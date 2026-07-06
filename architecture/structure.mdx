@@ -3,7 +3,9 @@ title: "Structure"
 description: "Where every file lives, and why."
 ---
 
-One app, one deploy, hard module boundaries. Every feature lands in the same shape, so anyone (human or agent) knows where things live without asking. The tree is the recipe, the same shape for every module:
+One app, one deploy, hard module boundaries. Every feature lands in the same shape, so anyone (human or agent) knows where things live without asking. Two trees: `app/` for Next.js routing, `lib/` for the Hono domain modules.
+
+## App
 
 ```text
 app/                    routes only, no business logic
@@ -14,6 +16,14 @@ app/                    routes only, no business logic
       _lib/             helpers private to this route
   api/
     [[...route]]/       one catch-all, Hono owns /api
+proxy.ts                the edge session gate
+```
+
+`app/` is routing, nothing else. Route groups organize without touching URLs, `_components` and `_lib` colocate route-private code out of the router, and one catch-all hands `/api` to Hono. `proxy.ts` gates every request at the edge before it reaches a route, and Hono trusts the session it already validated.
+
+## Modules
+
+```text
 lib/
   <module>/             one folder per domain, same shape every time
     router.ts           its Hono routes, mounted by the catch-all
@@ -22,19 +32,8 @@ lib/
     jobs/               its Inngest functions, one file per job, crons included
     <domain>.ts         its domain logic, the fat part
   shared/               events registry, tenant db, gateway client
-proxy.ts                the edge session gate
-specs/                  feature specs from the loop
-.specify/               spec-kit memory, the constitution
 ```
 
-## Modules
+A domain folder in `lib/` owns its logic, router, schema, jobs, and types, same shape every module, so a new domain is a new folder. Its jobs live in `jobs/`, see [Jobs](/architecture/jobs) for the canonical shape. Modules talk through exported functions and events, never another module's tables; `shared/` holds the event registry, the tenant transaction, and the gateway client, and stays that small on purpose. A type two modules need moves to `shared/`, and that is a smell to watch.
 
-A domain folder in `lib/` owns everything for that domain: its logic, its Hono router, its Drizzle tables, its jobs, and its types. New domain, new folder, same shape, per [Hono best practices](https://hono.dev/docs/guides/best-practices): modular sub-routers over one giant app. Its jobs live in `jobs/`, see [Jobs](/architecture/jobs) for the canonical shape.
-
-## App
-
-`app/` is routing, nothing else. [Route groups](https://nextjs.org/docs/app/getting-started/project-structure) organize without touching URLs, `_components` and `_lib` colocate route-private code out of the router, and one catch-all hands `/api` to Hono, see [Hono on Vercel](https://hono.dev/docs/getting-started/vercel).
-
-## Boundaries
-
-Modules talk through exported functions and events, never another module's tables. `shared/` has three residents, the event registry, the tenant transaction, and the gateway client, and it stays that small on purpose: growth means something is misplaced. A type two modules need moves there, and that is a smell to watch.
+At the root, `specs/` holds the feature specs from the loop and `.specify/` holds spec-kit memory. These pages are the constitution in human form, transcribed into `.specify/memory/constitution.md`: the agent gates every plan against it, and CI enforces the mechanical subset, see [Testing](/method/testing).

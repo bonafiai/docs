@@ -3,7 +3,7 @@ title: "Testing"
 description: "The commands you run and the gate your PR passes."
 ---
 
-Run these locally, CI runs the same. Green locally means green in the gate.
+A feature is done when its scenario tests pass, not when the agent says so. Run these locally, CI runs the same, green locally means green in the gate.
 
 ## Commands
 
@@ -12,26 +12,14 @@ Run these locally, CI runs the same. Green locally means green in the gate.
 | `bun run lint` | oxlint, prettier, and the invariant scripts (truth-write guard, spec-reference, scenario-coverage) |
 | `bun run typecheck` | `tsc`, no emit |
 | `bun run test` | Vitest, unit plus integration (integration needs the dev database) |
-| `bunx playwright test` | E2E acceptance, one test per spec scenario |
+| `bunx playwright test` | Acceptance, one test per spec scenario, the proof the agent built the behavior |
 
 Before every push: `bun run lint && bun run typecheck && bun run test`.
 
-## Layers
-
-| Name | Description |
-| --- | --- |
-| Static | Syntax, types, formatting, free and instant |
-| Invariant | The guardrails as executable scripts inside lint |
-| Unit | Pure logic, no network, no model, no env |
-| Integration | Real Postgres, migrations applied, tenant boundaries |
-| Acceptance | Playwright against a production build, scenario id in the title |
-
-Acceptance is what makes spec-driven development verifiable: the spec says the behavior, the test proves the agent built it.
-
 ## Gate
 
-Six required checks on every PR: lint, typecheck, unit, integration, e2e-acceptance, spec-reference. All deterministic, all key-free. LLM evals run nightly, never in the gate. Docs-only PRs pass through a companion workflow.
+Every PR runs the same commands as required checks, all deterministic, all key-free.
 
 <Warning>
-The gate does not grow by default. A seventh check needs a written reason.
+The gate does not grow by default. A new check needs a written reason.
 </Warning>

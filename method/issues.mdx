@@ -1,32 +1,20 @@
 ---
 title: "Issues"
-description: "The unit of work, filed and kept current by agents."
+description: "You describe a feature, an agent files it in Linear, you review."
 ---
 
-Agents file and work issues from chat and codebase context, humans hand over intent. We move fast by creating issues through agents, not by writing tickets by hand. The bar every issue clears: any agent can pick it up cold.
+An issue is where spec-driven work starts. It lives in Linear, not the repo (the repo's first feature file is spec-kit's `spec.md`). You describe a feature, an agent files it, you review, no hand-written tickets.
 
-| Name | Description |
-| --- | --- |
-| Intent | What and why in behavior terms. For features this becomes the [`/speckit.specify`](https://github.com/github/spec-kit) input |
-| Context | The links a cold agent needs: docs pages, official sources, related issues and PRs, the originating chat |
-| Scope | What this issue is not, the guard against over-eagerness |
+<Steps>
+  <Step title="Describe">
+    Tell an agent the feature in plain language, the behavior you want and why. No format to follow, that is the agent's job.
+  </Step>
+  <Step title="File">
+    The agent opens the issue in Linear through the [Linear MCP](/stack/tooling), building intent, context, and scope from your words plus the chat and codebase. The repo [contract](/stack/tooling) requires this, so every agent files consistently.
+  </Step>
+  <Step title="Review">
+    Check the filed issue, do not write it. Done when intent reads as behavior not implementation, every source a cold reader needs is linked, and scope is bounded with an explicit "not now".
+  </Step>
+</Steps>
 
-## Kinds
-
-Not every issue is a feature. The kind decides the path:
-
-| Name | Description |
-| --- | --- |
-| Feature | New behavior, takes the full loop, see [Workflow](/method/workflow) |
-| Fix | Regression or tweak, light path, names the broken scenario |
-| Chore | Dependencies, tooling, docs, no product behavior |
-
-## Lifecycle
-
-| Name | Description |
-| --- | --- |
-| Filed | An agent opens it the moment work is identified, carrying intent, context, and scope |
-| Worked | The agent posts decisions and progress on the issue as they happen, so it never goes stale |
-| Closed | The PR links the issue, leftovers become new issues, scope is never silently dropped |
-
-Done is not the agent saying done, done is the gate, see [Testing](/method/testing).
+A filed issue is the loop's only input, an agent picks it up and runs spec-kit from there, see [Workflow](/method/workflow).
