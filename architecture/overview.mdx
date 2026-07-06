@@ -3,7 +3,7 @@ title: "Overview"
 description: "The system map, one vertical slice from client to storage."
 ---
 
-Bonafi is a modular monolith: one app, one deploy, hard module boundaries. This page is the map. The binding rules and checklists live on [Guardrails](/architecture/guardrails).
+Bonafi is a modular monolith: one app, one deploy, hard module boundaries. This page is the map. Each plane gets its own concise page, starting with [Structure](/architecture/structure).
 
 ```mermaid
 flowchart TD
@@ -22,12 +22,12 @@ flowchart TD
 
 | Name | Description |
 | --- | --- |
-| [Structure](/architecture/guardrails#structure) | Domain modules in `lib/`, each owns its router, jobs, and tables |
-| [Request](/architecture/guardrails#request) | Browser to response through one path, slow work publishes to the bus |
-| [Access](/architecture/guardrails#access) | Session, tenant, permission, object. The edge never authorizes |
-| [Data](/architecture/guardrails#data) | Tenant transactions, module-owned tables, truth through the commit path |
-| [Events](/architecture/guardrails#events) | One typed publish contract, replayable at every stage |
-| [Intelligence](/architecture/guardrails#intelligence) | Every model call through the gateway, tools in one registry |
-| [Observability](/architecture/guardrails#observability) | One logger, request id from edge to job |
+| [Structure](/architecture/structure) | Domain modules in `lib/`, each owns its router, jobs, and tables |
+| Request | Browser to response through one path, slow work publishes to the bus |
+| Access | Session, tenant, permission, object. The edge never authorizes |
+| Data | Tenant transactions, module-owned tables, truth through the commit path |
+| Events | One typed publish contract, replayable at every stage |
+| Intelligence | Every model call through the gateway, tools in one registry |
+| Observability | One logger, request id from edge to job |
 
-This is the kitchen. [Guardrails](/architecture/guardrails) has the rules. Feature specs are the recipes.
+This is the kitchen. [Structure](/architecture/structure) says where everything lives, the other planes get their pages as the codebase lands. Feature specs are the recipes.

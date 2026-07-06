@@ -17,16 +17,7 @@ flowchart LR
   F -.drift.-> A
 ```
 
-| Name | Description |
-| --- | --- |
-| `/speckit.specify` | What and why, no tech stack. Creates the branch and `specs/NNN-name/` |
-| `/speckit.clarify` | Closes gaps before planning, forced `[NEEDS CLARIFICATION]` markers |
-| `/speckit.plan` | Tech stack and architecture, checked against the constitution and its gates |
-| `/speckit.tasks` | Ordered task list, independent tasks marked `[P]` for parallel execution |
-| `/speckit.implement` | Code and tests, refuses to run without spec, plan, and tasks |
-| `/speckit.converge` | Diffs spec vs code after shipping, appends remaining work |
-
-The agent runs these, not you. Prerequisites enforce the order.
+The agent runs the loop. Your three touchpoints: intent in, answers in the middle, review at the end, see [Commands](/method/commands) for what you say and check per step.
 
 ## Paths
 
@@ -50,7 +41,7 @@ What a feature directory contains when the loop has run:
 
 ## Gates
 
-`/speckit.plan` checks every plan against the constitution before tasks exist: simplicity (no future-proofing), anti-abstraction (use the framework directly), integration-first (contracts and real environments before code). Failing a gate demands written justification. Our project-defined articles live on [Guardrails](/architecture/guardrails), compliance is checked on every plan, and CI enforces the mechanical subset, see [Testing](/method/testing).
+`/speckit.plan` checks every plan against the constitution before tasks exist: simplicity (no future-proofing), anti-abstraction (use the framework directly), integration-first (contracts and real environments before code). Failing a gate demands written justification. Our project-defined articles live on the [architecture pages](/architecture/overview), compliance is checked on every plan, and CI enforces the mechanical subset, see [Testing](/method/testing).
 
 ## Scenarios
 
@@ -67,7 +58,7 @@ Scenario id (like `CAP-001`) goes in the test title. Done means all scenario tes
 
 ## Rules
 
-The binding rules live on [Guardrails](/architecture/guardrails). Spec-kit reads them from `.specify/memory/constitution.md`, CI enforces them as invariant scripts.
+The binding rules live on the [architecture pages](/architecture/overview). Spec-kit reads them from `.specify/memory/constitution.md`, CI enforces them as invariant scripts.
 
 ## Tracking
 

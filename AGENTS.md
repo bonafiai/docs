@@ -13,7 +13,7 @@ This is the spec hub for Bonafi, the source of truth agents and humans build fro
 | Name | Description |
 | --- | --- |
 | Spec | A feature description with acceptance scenarios, what to build, not how |
-| Guardrails | Our product-specific invariants (`/architecture/guardrails`) |
+| Guardrails | Our product-specific invariants, stated per architecture page, transcribed into the code repo's constitution |
 | Truth | Committed financial facts after human or agent approval |
 | Tooling | Versioned agent workbench: MCP servers, skills, `AGENTS.md` |
 
@@ -31,13 +31,13 @@ This is the spec hub for Bonafi, the source of truth agents and humans build fro
 
 ## Symmetry
 
-Every group is exactly two pages: the first orients, the second is what you act on. One-word page names, plain nouns, no metaphors in the sidebar.
+In every group the first page orients, the rest you act on. Every page concise, never a mega-page. One-word page names, plain nouns, no metaphors in the sidebar.
 
 | Group | Orient | Act |
 | --- | --- | --- |
 | Getting started | Introduction | Quickstart |
-| Method | Workflow | Testing |
-| Architecture | Overview | Guardrails |
+| Method | Workflow | Commands, Testing |
+| Architecture | Overview | Structure, more planes as they land |
 | Stack | Overview | Tooling |
 
 ## Diagrams
@@ -55,7 +55,7 @@ General Mintlify rules:
 
 ## Content boundaries
 
-Document: workflow, testing, architecture (overview, guardrails), stack, tooling.
+Document: workflow, commands, testing, architecture (overview, structure, more planes as they land), stack, tooling.
 
 Do not document here: per-SDK implementation depth (comes later as its own pass), API reference, or open deliberations.
 

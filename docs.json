@@ -16,11 +16,11 @@
       },
       {
         "group": "Method",
-        "pages": ["method/workflow", "method/testing"]
+        "pages": ["method/workflow", "method/commands", "method/testing"]
       },
       {
         "group": "Architecture",
-        "pages": ["architecture/overview", "architecture/guardrails"]
+        "pages": ["architecture/overview", "architecture/structure"]
       },
       {
         "group": "Stack",
