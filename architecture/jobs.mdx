@@ -37,3 +37,7 @@ Pick one per job, write it in the spec:
 | Recompute | Safe to re-run, rebuilds its output from persisted input |
 | Keyed | Serialized per entity by the concurrency key, re-runs allowed |
 | Re-runnable | Re-processing is the feature, like re-parsing a source |
+
+## Agent runs
+
+Agent tool-loop durability lives inside the `lib/ai` harness on [Vercel Workflow](https://vercel.com/docs/workflow) (`@ai-sdk/workflow`, `WorkflowAgent`): step checkpointing and resume for model and tool calls. Everything else async, module jobs and crons, is an Inngest function per the shape above. Run boundaries stay event-driven: the harness registers `run.*` schemas in `lib/shared/events.ts` and emits one completion event per run, so no module ever depends on the harness's internal engine.
