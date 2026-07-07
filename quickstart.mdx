@@ -36,49 +36,51 @@ description: "From a blank machine to a running app."
 
 ## Run the app
 
-These steps apply after the monorepo is scaffolded to the [Structure](/architecture/structure) shape.
-
 <Steps>
   <Step title="Clone">
     ```bash
-    gh repo clone bonafiai/mono
+    gh repo clone bonafiai/web
     gh repo clone bonafiai/docs
     ```
 
-    **mono** is the application, **docs** is this site.
+    **web** is the application, **docs** is this site. Open both in one Cursor window (`~/www` with `docs/` and `web/` siblings) or open `web/` alone for feature work.
   </Step>
   <Step title="Configure">
     ```bash
-    cd mono
+    cd web
     bun install
     cp .env.example .env.local
     ```
 
-    Fill the required values in `.env.local`.
+    Fill WorkOS and Inngest keys when you have them. The scaffold runs without a database until the first persistence spec lands.
   </Step>
   <Step title="Database">
-    Your own dev branch, real PlanetScale Postgres, mirrors prod:
+    When a spec adds tables, use your own PlanetScale Postgres branch:
 
     ```bash
     pscale branch switch <your-name> --database bonafi --create
-    bun run db:migrate
-    bun run dev:seed
     ```
 
-    Point `DATABASE_URL` in `.env.local` at the branch connection string. Offline fallback: `bun run dev:db:up` starts a local container.
+    Point `DATABASE_URL` in `.env.local` at the branch connection string, then apply migrations:
+
+    ```bash
+    bun run db:migrate
+    ```
+
+    See [Database](/architecture/database) for the generate and migrate loop. Until the repo has migrations, skip this step.
   </Step>
   <Step title="Run">
     ```bash
     bun run dev
     ```
 
-    Success: the app on `http://localhost:3024` (microfrontends proxy) and the Inngest dev server running next to it.
+    Success: the microfrontends proxy on `http://localhost:3024`, product app at `/`, test app at `/test`.
   </Step>
 </Steps>
 
 ## Connect Cursor
 
-Open the repo in Cursor. MCP servers are in `.cursor/mcp.json`; approve Linear OAuth when prompted. Spec-kit `/speckit.*` commands ship in the repo.
+Open `web/` in Cursor. MCP servers are in `.cursor/mcp.json`; approve Linear OAuth when prompted. Spec-kit `/speckit.*` commands ship in the repo. Read `.specify/memory/constitution.md` before feature work.
 
 ## Run the docs site
 
@@ -100,5 +102,8 @@ Success: this site on `http://localhost:3000`. Validate changes with `npx mint v
   </Card>
   <Card title="Jobs" icon="gears" href="/architecture/jobs">
     One canonical shape for everything async.
+  </Card>
+  <Card title="Database" icon="database" href="/architecture/database">
+    Schema per module, migrations per repo.
   </Card>
 </Columns>

@@ -2,7 +2,7 @@
 
 ## About this project
 
-This is the spec hub for Bonafi, the source of truth agents and humans build from. Code lives in [bonafiai/mono](https://github.com/bonafiai/mono). This repo holds the architecture doctrine (structure, types, jobs, more as they land).
+This is the spec hub for Bonafi, the source of truth agents and humans build from. Code lives in [bonafiai/web](https://github.com/bonafiai/web). This repo holds the architecture doctrine (structure, types, jobs, database, more as they land). Agents transcribe it into `.specify/memory/constitution.md` in the web repo.
 
 - Pages are MDX with YAML frontmatter
 - Configuration lives in `docs.json`
@@ -42,7 +42,7 @@ Page names orient, pages act. Every page concise, never a mega-page. One-word pa
 | Group | Pages |
 | --- | --- |
 | Getting started | Introduction, Quickstart |
-| Architecture | Structure, Types, Jobs, more as they land |
+| Architecture | Structure, Types, Jobs, Database, more as they land |
 
 The page contract: one concern per page, findable by name. A page ships text, sources, and an artifact (tree, table, or code skeleton), or it does not exist yet.
 
@@ -61,6 +61,6 @@ General Mintlify rules:
 
 ## Content boundaries
 
-Document: architecture (structure, types, jobs, more as they land).
+Document: architecture (structure, types, jobs, database, more as they land).
 
 Do not document here: per-SDK implementation depth (comes later as its own pass), API reference, or open deliberations.

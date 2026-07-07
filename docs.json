@@ -19,7 +19,8 @@
         "pages": [
           "architecture/structure",
           "architecture/types",
-          "architecture/jobs"
+          "architecture/jobs",
+          "architecture/database"
         ]
       }
     ],
@@ -27,7 +28,7 @@
       "anchors": [
         {
           "anchor": "Code",
-          "href": "https://github.com/bonafiai/mono",
+          "href": "https://github.com/bonafiai/web",
           "icon": "github"
         },
         {

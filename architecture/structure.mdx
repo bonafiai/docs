@@ -3,7 +3,7 @@ title: "Structure"
 description: "Where every file lives, and why."
 ---
 
-Apps route, `lib/` owns domain logic, `packages/ui` shares UI. Each app is self-contained: own `proxy.ts`, own auth boundary. Same template everywhere, placeholders show the shape.
+Apps route, `lib/` owns domain logic, `packages/ui` shares UI. Each app is self-contained: own `proxy.ts`, own auth boundary. Same template everywhere, placeholders show the shape. Guardrails are transcribed into `.specify/memory/constitution.md` in bonafiai/web.
 
 ## Apps
 
@@ -19,9 +19,11 @@ apps/
 packages/
   ui/
     src/components/                 shadcn CLI installs here
+specs/                              spec-kit artifacts per feature
+.specify/memory/constitution.md     agent contract, transcribed from this site
 ```
 
-Locally, [microfrontends](https://turborepo.dev/docs/guides/microfrontends) composes both apps on one URL; production routing is separate.
+Locally, [microfrontends](https://turborepo.dev/docs/guides/microfrontends) composes both apps on one URL; production routing is separate. `apps/web` is the full product app at `/` in production, not a UI fragment.
 
 ## App
 
@@ -34,6 +36,7 @@ app/                    routes only, no business logic
       _lib/
   api/
     [[...route]]/       one catch-all, Hono owns /api
+    inngest/            Inngest serve handler, web app only
 proxy.ts                at app root, gates this app only
 ```
 
@@ -53,8 +56,11 @@ lib/
   shared/
     events.ts                       zod event registry, noun.verb names
     db.ts                           tenant-scoped Drizzle client
+    inngest.ts                      Inngest client
     gateway.ts                      shared infra only; grows slowly
 ```
+
+The foundation ships `lib/shared/` only. Domain modules arrive via approved specs.
 
 ## Rules
 
@@ -65,7 +71,8 @@ lib/
 | Module shape | Every domain folder: `router.ts`, `schema.ts`, `types.ts`, `jobs/`, `<module>.ts` |
 | Ownership | A module owns its tables, logic, jobs, and types |
 | Boundaries | Modules talk through exported functions and events, never another module's tables |
-| `shared/` | Events registry, tenant db, gateway client only; a type two modules need moves here, and that is a smell |
+| `shared/` | Events registry, tenant db, Inngest client, gateway client only; a type two modules need moves here, and that is a smell |
 | UI | Route-private code in `_components` and `_lib`; shared components from `@repo/ui` |
+| Specs | No feature work without `specs/NNN-*/spec.md`; no new `lib/<module>/` without an approved spec |
 
-Placement rules: [Types](/architecture/types). Async rules: [Jobs](/architecture/jobs).
+Placement rules: [Types](/architecture/types). Async rules: [Jobs](/architecture/jobs). Persistence rules: [Database](/architecture/database).

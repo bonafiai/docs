@@ -1,0 +1,36 @@
+---
+title: "Database"
+description: "Schema per module, migrations per repo."
+---
+
+Tables live in `lib/<module>/schema.ts`; migration SQL lives in `drizzle/` at the repo root. One [Drizzle Kit](https://orm.drizzle.team/docs/kit-overview) history for the whole monorepo, even though each module owns its tables.
+
+## Commands
+
+```bash
+bun run db:generate    # after editing lib/<module>/schema.ts
+bun run db:migrate     # apply pending SQL to DATABASE_URL
+```
+
+Success after generate: new files under `drizzle/`, committed with the schema change in the same PR. Success after migrate: your PlanetScale branch matches the repo's migration history.
+
+## Shape
+
+```text
+lib/<module>/schema.ts     Drizzle tables for this module only
+drizzle/                   generated SQL, versioned in git
+drizzle.config.ts          schema glob: lib/*/schema.ts
+lib/shared/db.ts             one tenant-scoped client, all modules use it
+```
+
+## Rules
+
+| Name | Description |
+| --- | --- |
+| Ownership | A module owns its tables in its own `schema.ts`. No module reads another module's tables. |
+| Generate | Run `db:generate` when a spec adds or changes tables. Commit the SQL with the TypeScript schema. |
+| Migrate | Run `db:migrate` against your dev branch before integration tests that touch the DB. Re-running on an up-to-date branch is a no-op. |
+| Dev branch | Each developer uses a [PlanetScale](https://planetscale.com/docs) Postgres branch; `DATABASE_URL` in `.env.local` points at it. |
+| Scaffold | The foundation ships zero tables and zero migrations. The first persistence spec creates both. |
+
+Placement rules: [Structure](/architecture/structure). Type rules: [Types](/architecture/types).

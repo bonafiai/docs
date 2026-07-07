@@ -3,7 +3,7 @@ title: "Introduction"
 description: "Turborepo monorepo, modular monolith, spec-driven."
 ---
 
-A [Turborepo](https://turborepo.dev/docs/guides/frameworks/nextjs) monorepo, modular monolith in TypeScript. Two Next.js apps (`apps/web`, `apps/test`) share `packages/ui` and a root `lib/` of Hono routers, Drizzle schemas, and Inngest jobs. [Spec-kit](https://github.com/github/spec-kit) drives every feature; this site is the constitution: the structure, types, and guardrails every feature is built on.
+A [Turborepo](https://turborepo.dev/docs/guides/frameworks/nextjs) monorepo, modular monolith in TypeScript. Two Next.js apps (`apps/web`, `apps/test`) share `packages/ui` and a root `lib/` of Hono routers, Drizzle schemas, and Inngest jobs. [Spec-kit](https://github.com/github/spec-kit) drives every feature. This site is the architecture source of truth; agents transcribe it into `.specify/memory/constitution.md` in [bonafiai/web](https://github.com/bonafiai/web).
 
 ## Navigate
 
@@ -21,5 +21,8 @@ Start with [Quickstart](/quickstart), then [Structure](/architecture/structure) 
   </Card>
   <Card title="Jobs" icon="gears" href="/architecture/jobs">
     One canonical shape for everything async.
+  </Card>
+  <Card title="Database" icon="database" href="/architecture/database">
+    Schema per module, migrations per repo.
   </Card>
 </Columns>
