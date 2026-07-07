@@ -40,9 +40,24 @@ Each stage is an Inngest job triggered by exactly one event and emitting exactly
 
 Stages 3 to 6 hang off a thin `extraction_runs` row, not `parse_id` directly. The run records which code version derived which rows from which parse. Fixing a deterministic bug means a new run over the same parse, never re-parsing and never mutating the old run's rows.
 
+**Storage:** `extraction_runs`
+
+```text
+extraction_runs
+  id                uuid PK
+  parse_id          FK parses
+  organization_id   FK
+  pipeline_version  text        -- code version of the deterministic stages
+  doc_type          text (nullable)         -- run-scoped classifier verdict; sole consumer is the Stage 5 scope chain
+  classifier_version text (nullable)
+  status            enum: running | structured | values_extracted | resolved | proposed | failed
+  created_at        timestamptz
+```
+
+The shapes below are the architectural contract. The Drizzle tables in `lib/<module>/schema.ts` are the implementation source of truth, and types derive from them.
+
 | Name | Description |
 | --- | --- |
-| `extraction_runs` | One active run per parse. Carries `pipeline_version`, run-scoped `doc_type` and `classifier_version`, and `status`. |
 | Active pointer | `parses.active_run_id` designates the live run. Superseded runs stay for audit and are never read by downstream consumers. |
 | Ownership | Every Stage 3 and later row foreign keys `run_id`. Deleting a superseded run cascades its derivation. |
 | All-or-nothing | Downstream only reads runs that reached the required status, following `active_run_id`. A failed run's partial rows are orphaned and swept. |
@@ -58,6 +73,22 @@ A user or connector uploads a raw file. The file goes to R2 unmodified. A `sourc
 - Duplicate upload, same `content_hash` within the org, creates a new `sources` row pointing at the existing R2 object. The pipeline is not re-run.
 - Duplicate provenance walks to the first uploader by design. The shared parse's `source_id` points at the original source.
 
+**Storage:** `sources`
+
+```text
+sources
+  id                uuid PK
+  organization_id   FK
+  uploaded_by       FK member (nullable, connectors)
+  file_name         text
+  mime_type         text
+  byte_size         int
+  content_hash      text        -- sha256 of the raw bytes; duplicate detection
+  r2_key            text        -- immutable; never rewritten
+  status            enum: uploaded | parsing | parsed | failed
+  created_at        timestamptz
+```
+
 Emits `source.uploaded`, triggers Stage 2.
 
 ### 2 Parse and classify
@@ -68,6 +99,35 @@ The parser turns the raw file into a machine-readable artifact stored verbatim i
 - Pages are first-class. Parse completion writes one `pages` row per page with index and dimensions. Every geometric row downstream foreign keys `page_id`. Bboxes are normalized `[x0, y0, x1, y1]` in `0.0` to `1.0`.
 - Classification is run-scoped, not parse-scoped. `doc_type` lives on `extraction_runs` because its only consumer is the Stage 5 scope chain. Reclassifying is a new run, never a mutation of the frozen parse.
 - `doc_type` is a scoping hint, never a hard gate. The scope chain falls through to org and global, so a wrong or missing `doc_type` degrades to broader precedents rather than blocking.
+
+**Storage:** `parses`, `pages`
+
+```text
+parses
+  id                uuid PK
+  source_id         FK sources
+  parser            text
+  parser_version    text
+  status            enum: pending | succeeded | failed
+  error             text (nullable)
+  page_count        int
+  artifact_r2_key   text        -- R2 object holding the raw parse output, verbatim
+  artifact_bytes    int
+  active_run_id     FK extraction_runs (nullable)
+  created_at        timestamptz
+  completed_at      timestamptz
+
+sources (addition)
+  active_parse_id   FK parses (nullable)   -- explicit pointer to the live parse
+
+pages
+  id                uuid PK
+  parse_id          FK parses
+  page_index        int          -- 0-based
+  width             numeric      -- PDF points; the bbox coordinate space
+  height            numeric
+  UNIQUE (parse_id, page_index)
+```
 
 Emits `source.parsed`, triggers Stage 3.
 
@@ -81,6 +141,71 @@ A pure deterministic function of the parse artifact. No LLM, no DB lookups, no n
 - A label plays a descriptor or value role derived from which slot references it, never from a column on the label.
 - Each structural occurrence mints its own label row. Dedup happens at resolvement.
 
+**Storage:** `tables`, `table_axes`, `table_cells`, `quantity_atoms`, `date_atoms`, `labels`
+
+```text
+tables
+  id                  uuid PK
+  run_id              FK extraction_runs
+  page_id             FK pages
+  table_index         int
+  bbox                numeric[4]
+  n_rows              int
+  n_cols              int
+  title_label_id      FK labels (nullable)   -- heading directly above the table
+
+table_axes
+  id                  uuid PK
+  table_id            FK tables
+  axis                enum: row | column
+  axis_index          int
+  span_end            int (nullable)         -- spanning header coverage
+  level               int                    -- hierarchy depth
+  parent_axis_id      FK table_axes (nullable)
+  bbox                numeric[4] (nullable)
+  label_id            FK labels (nullable)   -- null: an unlabeled axis
+  UNIQUE (table_id, axis, level, axis_index)
+
+table_cells
+  id                  uuid PK
+  table_id            FK tables
+  row_axis_id         FK table_axes
+  column_axis_id      FK table_axes          -- always a leaf column
+  row_index           int
+  col_index           int
+  raw_text            text
+  bbox                numeric[4]
+  quantity_atom_id    FK quantity_atoms (nullable)   -- exactly one of the three payload refs set
+  date_atom_id        FK date_atoms (nullable)
+  value_label_id      FK labels (nullable)
+  footnote_marker     text (nullable)
+  UNIQUE (table_id, row_index, col_index)
+
+quantity_atoms
+  id                  uuid PK
+  run_id              FK extraction_runs
+  raw_text            text
+  value               numeric
+  unit                text (nullable)        -- USD | EUR | ratio | shares
+  normalization_version text
+
+date_atoms
+  id                  uuid PK
+  run_id              FK extraction_runs
+  raw_text            text
+  value               date
+  normalization_version text
+
+labels
+  id                  uuid PK
+  run_id              FK extraction_runs
+  kind                enum: column_header | row_header | cell_text | kv_key | kv_value | narrative | table_title
+  surface_text        text
+  normalized_text     text                   -- cross-document identity; the precedent match key
+  unit_hint           text (nullable)
+  scale_hint          numeric (nullable)
+```
+
 Emits `run.structured`, triggers Stage 4.
 
 ### 4 Non-table
@@ -91,6 +216,26 @@ Values outside tables: title-block key-value pairs, amounts and dates in prose, 
 - Verbatim guard. Every extracted span must appear verbatim in the parse artifact. `raw_text` is the proof, `bbox` is recovered by grounding the span back to the artifact.
 - Pairing is geometric, not reading-order. Key to value linking uses grounded bboxes. A weak or ambiguous pairing becomes a review item, never a silent commit.
 - The LLM extracts, it does not interpret. A key becomes a label like any other and waits for Stage 5.
+
+**Storage:** `freestanding_values`
+
+```text
+freestanding_values
+  id                  uuid PK
+  run_id              FK extraction_runs
+  page_id             FK pages
+  key_label_id        FK labels (nullable)   -- null: keyless mention
+  key_bbox            numeric[4] (nullable)
+  raw_text            text
+  bbox                numeric[4]
+  quantity_atom_id    FK quantity_atoms (nullable)   -- exactly one payload ref set
+  date_atom_id        FK date_atoms (nullable)
+  value_label_id      FK labels (nullable)
+  pairing_method      enum: geometric | text_order | llm
+  pairing_confidence  numeric (nullable)     -- low: a review item, never a silent commit
+  extractor_version   text
+  context_snippet     text (nullable)
+```
 
 Emits `run.values_extracted`, triggers Stage 5.
 
@@ -104,6 +249,49 @@ Every label gets one resolvement per run through one machine. This stage also as
 - Document roles ride on `label_resolvements` via a `document_role` column with a partial unique index, one winner per role per run. Election is candidate-only and never introduces a value Stage 4 did not extract.
 - Confirming a mapping mints an org-wide precedent by default. The flywheel: every human correction is a precedent, so the system asks fewer questions tomorrow.
 
+**Storage:** `label_resolvements`, `resolvement_candidates`, `precedents`
+
+```text
+label_resolvements
+  id                  uuid PK
+  run_id              FK extraction_runs
+  label_id            FK labels UNIQUE
+  status              enum: auto | proposed | confirmed | rejected
+  target_kind         enum: canonical_metric | entity | document_ref | period | measure | literal
+  target_ref          text (nullable)
+  mint_request        jsonb (nullable)       -- new entity proposal
+  method              enum: precedent | llm | human
+  precedent_id        FK precedents (nullable)
+  document_role       text (nullable)        -- partial UNIQUE (run_id, document_role)
+  confidence          numeric
+  rationale           text (nullable)
+  resolver_version    text
+  created_at          timestamptz
+
+resolvement_candidates
+  id                  uuid PK
+  resolvement_id      FK label_resolvements
+  rank                int
+  target_kind         enum (as above)
+  target_ref          text
+  score               numeric
+  source              enum: precedent_knn | registry_similarity | entity_blocking | recognizer
+
+precedents
+  id                  uuid PK
+  organization_id     FK (nullable)          -- null only for scope = global
+  match_key           text                   -- the label normalized_text; the only match dimension
+  scope               enum: doc_type | org | global
+  scope_ref           text (nullable)
+  target_kind         enum (as above)
+  target_ref          text
+  created_from        FK label_resolvements (nullable)
+  created_by          FK member (nullable)
+  match_count         int
+  last_used_at        timestamptz
+  revoked_at          timestamptz (nullable)  -- precedents are never deleted, only revoked
+```
+
 Emits `run.resolved`, triggers Stage 6.
 
 ### 6 Proposals
@@ -116,6 +304,29 @@ A proposal is computed, never authored: `proposal = f(carrier payload, resolveme
 - Loud failure: a position metric missing its investor slot is `blocked` with a flag, never silently reshaped into an entity metric.
 - Every atom or value label must end up referenced by some proposal or be explicitly marked dropped. Residue is a run-level report, not silence.
 
+**Storage:** `proposals`, `proposal_inputs`
+
+```text
+proposals
+  id                  uuid PK
+  run_id              FK extraction_runs
+  identity            text                   -- stable hash over payload lineage; keys the decision log
+  kind                enum: entity | metric
+  body                jsonb                  -- computed proposal; the only JSONB in Postgres, disposable
+  body_hash           text
+  status              enum: ready | blocked | flagged
+  flags               text[]                 -- missing_required_slot:investor, scope_conflict, ...
+  compute_version     text
+  computed_at         timestamptz
+  UNIQUE (run_id, identity)
+
+proposal_inputs
+  proposal_id         FK proposals
+  input_kind          enum: cell | freestanding_value | resolvement | registry_version
+  input_ref           text
+  role                text                   -- value | metric_label | entity_slot:investor | period | ...
+```
+
 Emits `run.proposed`. Review is ready.
 
 ### 7 Commit
@@ -125,6 +336,22 @@ Approval turns a proposal into truth. Decisions are append-only and keyed on the
 - Approve commits the truth rows and the decision row in one transaction. Each truth row carries `decision_id`.
 - Staleness is derived. If a decided proposal's recomputed `body_hash` no longer matches `body_hash_at_decision`, it is flagged stale and re-queued.
 - Reverts append a decision and reverse the truth write. Nothing is deleted.
+
+**Storage:** `proposal_decisions`
+
+```text
+proposal_decisions
+  id                  uuid PK
+  organization_id     FK
+  proposal_identity   text                   -- joins to proposals.identity
+  kind                enum: approve | reject | edit
+  actor               FK member (or agent identifier)
+  body_hash_at_decision text                 -- what the human actually saw
+  edited_body         jsonb (nullable)       -- present on edit
+  created_at          timestamptz
+```
+
+Truth rows themselves (`entities`, `relationships`, `transactions`, `asset_metrics`, `investment_metrics`, `lineage`) are documented on the [Truth](/architecture/truth) page.
 
 Emits `proposal.committed`.
 
