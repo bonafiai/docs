@@ -331,7 +331,7 @@ Emits `run.proposed`. Review is ready.
 
 ### 7 Commit
 
-Approval turns a proposal into truth. Decisions are append-only and keyed on the proposal's stable `identity`, not its row id, so they survive recompute and re-extraction. See [Truth](/architecture/truth).
+Approval turns a proposal into truth. Decisions are append-only and keyed on the proposal's stable `identity`, not its row id, so they survive recompute and re-extraction.
 
 - Approve commits the truth rows and the decision row in one transaction. Each truth row carries `decision_id`.
 - Staleness is derived. If a decided proposal's recomputed `body_hash` no longer matches `body_hash_at_decision`, it is flagged stale and re-queued.
@@ -351,12 +351,10 @@ proposal_decisions
   created_at          timestamptz
 ```
 
-Truth rows themselves (`entities`, `relationships`, `transactions`, `asset_metrics`, `investment_metrics`, `lineage`) are documented on the [Truth](/architecture/truth) page.
-
 Emits `proposal.committed`.
 
 ## Bundle splitting
 
 A source is one logical document. A PDF containing several statements is not split. This is load-bearing: the partial unique index `(run_id, document_role)` allows exactly one investor, fund, and period_end per run, so a bundle of several investor statements is structurally unrepresentable. The clean seam to retrofit splitting is between Stage 1 and Stage 2: a `documents` layer so one source fans out into N logical documents, each parsed independently.
 
-Placement rules: [Structure](/architecture/structure). Type rules: [Types](/architecture/types). Job rules: [Jobs](/architecture/jobs). Persistence rules: [Database](/architecture/database). Truth rules: [Truth](/architecture/truth).
+Placement rules: [Structure](/architecture/structure). Type rules: [Types](/architecture/types). Job rules: [Jobs](/architecture/jobs). Persistence rules: [Database](/architecture/database).

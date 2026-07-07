@@ -21,8 +21,7 @@
           "architecture/types",
           "architecture/jobs",
           "architecture/database",
-          "architecture/extraction-pipeline",
-          "architecture/truth"
+          "architecture/extraction-pipeline"
         ]
       }
     ],
