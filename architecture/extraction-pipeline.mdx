@@ -1,0 +1,135 @@
+---
+title: "Extraction"
+description: "Source to truth in seven stages."
+---
+
+A document moves through seven stages from upload to truth. Each stage reads only the previous stage's persisted output, emits exactly one event, and never reaches around its neighbor. Anchoring is not a stage: a document role is a document-scoped resolvement folded into Stage 5.
+
+## Stage map
+
+| # | Stage | Input | Persisted output | Emits |
+| --- | --- | --- | --- | --- |
+| 1 | Source upload | raw file | R2 object, `sources` row | `source.uploaded` |
+| 2 | Parse and classify | source file | `parses` row, artifact in R2, `pages` rows, `doc_type` on the run | `source.parsed` |
+| 3 | Structural | parse artifact | `extraction_runs` row, `tables`, `table_axes`, `table_cells`, `quantity_atoms`, `date_atoms`, `labels` | `run.structured` |
+| 4 | Non-table | parse artifact, Stage 3 rows | `freestanding_values` (same payload objects) | `run.values_extracted` |
+| 5 | Resolvement | labels, precedents, registry | `label_resolvements`, `resolvement_candidates`, `precedents`, document roles | `run.resolved` |
+| 6 | Proposals | resolvements, registry | `proposals`, `proposal_inputs` | `run.proposed` |
+| 7 | Commit | approved proposals | truth rows, `proposal_decisions` | `proposal.committed` |
+
+## Principles
+
+| Name | Description |
+| --- | --- |
+| Relational first | Everything derived from a parse is relational rows that reference each other. The raw parse artifact is the one opaque blob, stored in R2. The only JSONB in Postgres is the disposable proposal body, rebuildable from relational inputs. |
+| Immutable inputs | Raw files, parse artifacts, and resolvement records are never mutated. Re-running a stage produces new rows. |
+| Provenance end to end | Every truth value walks back: truth row to proposal to atom or label to cell to table to parse artifact to source file, with bboxes at every geometric step. |
+| One resolvement machine | All labels, metric headers, entity mentions, KV keys, go through one precedent, candidate, reasoning system. One store, one audit shape. |
+| Few object classes | Table cells and freestanding values reuse the same payload objects. No parallel near-duplicate concepts. |
+| Modular stages | Each stage reads only the previous stage's persisted output and emits one completion event. A stage's implementation can be swapped without touching neighbors. |
+
+<Callout type="warning">
+A run is all-or-nothing per stage. A stage advances `status` only on full completion. A mid-stage failure leaves the run `failed` and its partial rows are never consumed. Recovery is a new run, never a resume.
+</Callout>
+
+## Event bus
+
+Each stage is an Inngest job triggered by exactly one event and emitting exactly one event. Re-running a stage re-emits its event and the downstream chain replays. The stage map table above is the chain: `source.uploaded` through `proposal.committed`. A precedent minted in review re-resolves held labels by re-emitting `run.resolved`.
+
+## Run spine
+
+Stages 3 to 6 hang off a thin `extraction_runs` row, not `parse_id` directly. The run records which code version derived which rows from which parse. Fixing a deterministic bug means a new run over the same parse, never re-parsing and never mutating the old run's rows.
+
+| Name | Description |
+| --- | --- |
+| `extraction_runs` | One active run per parse. Carries `pipeline_version`, run-scoped `doc_type` and `classifier_version`, and `status`. |
+| Active pointer | `parses.active_run_id` designates the live run. Superseded runs stay for audit and are never read by downstream consumers. |
+| Ownership | Every Stage 3 and later row foreign keys `run_id`. Deleting a superseded run cascades its derivation. |
+| All-or-nothing | Downstream only reads runs that reached the required status, following `active_run_id`. A failed run's partial rows are orphaned and swept. |
+| Deterministic IDs | Stage 3 uses UUIDv5 over `run_id` plus structural path so re-runs are diffable. LLM stages start fresh. |
+
+## Stages
+
+### 1 Source upload
+
+A user or connector uploads a raw file. The file goes to R2 unmodified. A `sources` row is the provenance root.
+
+- The R2 object is written once. `r2_key` includes the content hash so the same bytes always land on the same key.
+- Duplicate upload, same `content_hash` within the org, creates a new `sources` row pointing at the existing R2 object. The pipeline is not re-run.
+- Duplicate provenance walks to the first uploader by design. The shared parse's `source_id` points at the original source.
+
+Emits `source.uploaded`, triggers Stage 2.
+
+### 2 Parse and classify
+
+The parser turns the raw file into a machine-readable artifact stored verbatim in R2. The `parses` row keeps `artifact_r2_key` and size metadata. The artifact is read through one accessor so the storage backend is swappable.
+
+- The artifact is stored verbatim, no cleanup or enrichment. A derived shape is Stage 3's relational output.
+- Pages are first-class. Parse completion writes one `pages` row per page with index and dimensions. Every geometric row downstream foreign keys `page_id`. Bboxes are normalized `[x0, y0, x1, y1]` in `0.0` to `1.0`.
+- Classification is run-scoped, not parse-scoped. `doc_type` lives on `extraction_runs` because its only consumer is the Stage 5 scope chain. Reclassifying is a new run, never a mutation of the frozen parse.
+- `doc_type` is a scoping hint, never a hard gate. The scope chain falls through to org and global, so a wrong or missing `doc_type` degrades to broader precedents rather than blocking.
+
+Emits `source.parsed`, triggers Stage 3.
+
+### 3 Structural
+
+A pure deterministic function of the parse artifact. No LLM, no DB lookups, no network. It joins the artifact's layout view with the grounded sidecar and writes the relational substrate: tables, axes, cells, atoms, labels. Re-running with the same artifact and same `pipeline_version` produces identical rows.
+
+- Transcription, not interpretation. Stage 3 mirrors what the parser asserts about structure and asserts nothing of its own. It does not decide a row is a total, a table is transposed, or two tables are continuations. Those are meanings, resolved at Stage 5 and later.
+- One axis class covers rows, column headers, and spanning headers. A column header and a row are the same structural thing.
+- Atoms are pure payload: a quantity or date, deterministically parsed, never resolved. Every other string in a value position is a label.
+- A label plays a descriptor or value role derived from which slot references it, never from a column on the label.
+- Each structural occurrence mints its own label row. Dedup happens at resolvement.
+
+Emits `run.structured`, triggers Stage 4.
+
+### 4 Non-table
+
+Values outside tables: title-block key-value pairs, amounts and dates in prose, standalone mentions. This stage reuses the Stage 3 payload objects. The only new object is the carrier, `freestanding_values`.
+
+- One LLM pass over per-page markdown with tables stripped. One prompt version to audit.
+- Verbatim guard. Every extracted span must appear verbatim in the parse artifact. `raw_text` is the proof, `bbox` is recovered by grounding the span back to the artifact.
+- Pairing is geometric, not reading-order. Key to value linking uses grounded bboxes. A weak or ambiguous pairing becomes a review item, never a silent commit.
+- The LLM extracts, it does not interpret. A key becomes a label like any other and waits for Stage 5.
+
+Emits `run.values_extracted`, triggers Stage 5.
+
+### 5 Resolvement
+
+Every label gets one resolvement per run through one machine. This stage also assigns document roles: a role is a document-scoped resolvement, not a separate stage or table.
+
+- The resolve ladder: precedent exact match, candidate generation, LLM pick among candidates, human confirm. Only the precedent rung auto-accepts.
+- An exact match requires exactly one non-revoked precedent on `normalized_text` at the winning scope tier, an applicable scope, and a still-valid target. Conflicts fall through, never guess.
+- The scope chain is `doc_type`, then `org`, then `global`, most specific first.
+- Document roles ride on `label_resolvements` via a `document_role` column with a partial unique index, one winner per role per run. Election is candidate-only and never introduces a value Stage 4 did not extract.
+- Confirming a mapping mints an org-wide precedent by default. The flywheel: every human correction is a precedent, so the system asks fewer questions tomorrow.
+
+Emits `run.resolved`, triggers Stage 6.
+
+### 6 Proposals
+
+A proposal is computed, never authored: `proposal = f(carrier payload, resolvements, registry, document roles)`. Stage 6 runs `f()` over every carrier and persists the result plus its input lineage.
+
+- `f()` is an ordered chain of small pure rules. Build the per-rule fixture matrix up front: governing-chain assembly, exactly-one canonical, scope precedence, as-of derivation, unit and scale fall-through, representation, dedup, series-identity.
+- Fact identity is base concept plus temporal scope plus slots plus when plus representation. The same header under a quarter-to-date and an inception-to-date column composes into two cleanly distinct facts.
+- The proposal body is the only JSONB in Postgres, a disposable projection rebuildable from `proposal_inputs`.
+- Loud failure: a position metric missing its investor slot is `blocked` with a flag, never silently reshaped into an entity metric.
+- Every atom or value label must end up referenced by some proposal or be explicitly marked dropped. Residue is a run-level report, not silence.
+
+Emits `run.proposed`. Review is ready.
+
+### 7 Commit
+
+Approval turns a proposal into truth. Decisions are append-only and keyed on the proposal's stable `identity`, not its row id, so they survive recompute and re-extraction. See [Truth](/architecture/truth).
+
+- Approve commits the truth rows and the decision row in one transaction. Each truth row carries `decision_id`.
+- Staleness is derived. If a decided proposal's recomputed `body_hash` no longer matches `body_hash_at_decision`, it is flagged stale and re-queued.
+- Reverts append a decision and reverse the truth write. Nothing is deleted.
+
+Emits `proposal.committed`.
+
+## Bundle splitting
+
+A source is one logical document. A PDF containing several statements is not split. This is load-bearing: the partial unique index `(run_id, document_role)` allows exactly one investor, fund, and period_end per run, so a bundle of several investor statements is structurally unrepresentable. The clean seam to retrofit splitting is between Stage 1 and Stage 2: a `documents` layer so one source fans out into N logical documents, each parsed independently.
+
+Placement rules: [Structure](/architecture/structure). Type rules: [Types](/architecture/types). Job rules: [Jobs](/architecture/jobs). Persistence rules: [Database](/architecture/database). Truth rules: [Truth](/architecture/truth).

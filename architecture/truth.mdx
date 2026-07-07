@@ -1,0 +1,90 @@
+---
+title: "Truth"
+description: "One write gate, lineage for every value."
+---
+
+Truth is the canonical portfolio state. AI never writes truth directly. Exactly one function, `commitToTruth`, may write truth, and every committed value carries a `lineage` row back to the proposal and document it came from. The [extraction pipeline](/architecture/extraction-pipeline) produces proposals; truth emerges through this one gate.
+
+## Split
+
+| Name | Description |
+| --- | --- |
+| Proposals | Candidate facts. The only place AI may write. A proposal is a guess with evidence, not yet trusted. |
+| Truth | The canonical portfolio state. AI can never write here directly. `commitToTruth` is the only writer. |
+| Lineage | Provenance. Every committed truth value gets a `lineage` row pointing back to the proposal it came from. |
+
+The payoff of the split:
+
+| Name | Description |
+| --- | --- |
+| Safety boundary | AI can only reach proposals. A bug in a prompt creates noise in review, never silent corruption of truth. |
+| Replayable substrate | Perception happens once. Meaning can be recomputed forever without re-reading the document. |
+| Audit by construction | Truth rows are versioned, never overwritten, and every one has a `lineage` edge back to its evidence. |
+
+## Gate
+
+`commitToTruth` takes a typed `CommitInput`, writes the truth row, its `lineage` edge, and supersedes the source proposals in one transaction. The single-writer invariant is enforced at three independent layers:
+
+| Layer | Mechanism | What it stops |
+| --- | --- | --- |
+| Architecture | AI code paths only ever write proposals. | A whole class of design mistakes. Nothing in extraction has a truth-write call to get wrong. |
+| Code-time | A CI static check fails if any insert or update against a truth table appears outside the reconciler module. | A direct write sneaking into a feature branch. |
+| Runtime | A Postgres trigger rejects any write unless `app.commit_source` is set to `reconciler` inside the same transaction. | Anything at all, including raw SQL or a migration that dodges layers one and two. |
+
+`commitToTruth` is the only code that sets that GUC. Table columns and RLS live in `lib/<module>/schema.ts`, not duplicated here.
+
+## Graph
+
+Truth is a graph with append-only, versioned rows.
+
+| Primitive | Table | Description |
+| --- | --- | --- |
+| Node | `entities` | A person, company, fund, trust, or asset. One table, `kind` is the label. Typed detail in `entity_person`, `entity_fund`, `entity_asset_class`. |
+| Edge | `relationships` | A directed link `from_entity_id` to `to_entity_id`, labelled by `kind`. Typed detail for investments in `relationship_investment`. |
+| Movement | `transactions` | A dated money movement, a capital call or distribution, attributable to a holding. |
+| Measure | `asset_metrics`, `investment_metrics` | Stated measures over time, keyed on a node or an edge. |
+| Provenance | `lineage` | The derivation edges that answer "how do we know?". |
+
+All truth rows share a common spine: `organization_id` (tenant, RLS-enforced), `actor_kind` and `actor_id` (who produced it), `trust_score`, `superseded_by` (versioning), and `retracted_at` (tombstone). Truth is never destructively updated.
+
+## Classes
+
+A truth class answers one question: what kind of truth is this fact, and which truth table does it become? The committable classes map one-to-one onto truth tables.
+
+| Class | Table | Keyed on | Question |
+| --- | --- | --- | --- |
+| `entity` | `entities` | is the node | Who or what exists? |
+| `relationship` | `relationships` | the edge | How are two nodes linked? |
+| `transaction` | `transactions` | edge and entity | What money moved, and when? |
+| `asset_metric` | `asset_metrics` | `entity_id`, one node | What is the thing itself worth? |
+| `investment_metric` | `investment_metrics` | `relationship_id`, one edge | How is one holder's stake doing? |
+
+`asset_metric` and `investment_metric` are both stated measures as of a date. They differ by what they attach to: `asset_metric` is arity one on a single node, `investment_metric` is arity two on the holder's `invests_in` edge. `transaction` is a directed, dated flow, not a stock.
+
+<Callout type="warning">
+Class is derived, never decided. Nothing labels a value as asset-metric, investment-metric, or transaction per cell. Once a header resolves to a canonical metric, the class is a lookup against the registry, an output of resolvement, not an input a reviewer or model picks.
+</Callout>
+
+### Fact
+
+`proposal_target_kind` has a sixth member, `fact`, that is not committable. `commitToTruth` has no handler for it, and the truth-write static check fails CI if one is ever added. A `fact` proposal is kind-undecided: the extractor found a value but the reviewer must decide what it is before it can become truth. Resolving a `fact` always supersedes it with a typed proposal first.
+
+## Provenance
+
+The durable chain answers "how do we know this value?" by walking backwards:
+
+| Step | Object |
+| --- | --- |
+| Truth row | `asset_metrics`, `investment_metrics`, `transactions`, `entities`, `relationships` |
+| Lineage | `lineage` row |
+| Proposal | `proposals` row |
+| Inputs | `proposal_inputs` |
+| Carrier | cell or freestanding value |
+| Atom or label | `quantity_atoms`, `date_atoms`, `labels` |
+| Geometry | table or page |
+| Parse | `parses` artifact in R2 |
+| Source | `sources` row, source file |
+
+`lineage` is polymorphic on both ends (`derived_table` and `derived_id`, `source_table` and `source_id`), so one recursive walk traverses supersession chains, merges, and manual overrides uniformly.
+
+Pipeline rules: [Extraction](/architecture/extraction-pipeline). Persistence rules: [Database](/architecture/database).
