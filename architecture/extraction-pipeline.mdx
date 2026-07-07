@@ -5,6 +5,8 @@ description: "Source to truth in seven stages."
 
 A document moves through seven stages from upload to truth. Each stage reads only the previous stage's persisted output, emits exactly one event, and never reaches around its neighbor. Anchoring is not a stage: a document role is a document-scoped resolvement folded into Stage 5.
 
+This page is the canonical design. It records the "how" — storage contracts, event wiring, and the normalizer and composition algorithms. Specs in `specs/NNN-*` are implementation slices that reference this page; the Drizzle tables in `lib/<module>/schema.ts` are the implementation source of truth, and types derive from them.
+
 ## Stage map
 
 | # | Stage | Input | Persisted output | Emits |
@@ -16,6 +18,8 @@ A document moves through seven stages from upload to truth. Each stage reads onl
 | 5 | Resolvement | labels, precedents, registry | `label_resolvements`, `resolvement_candidates`, `precedents`, document roles | `run.resolved` |
 | 6 | Proposals | resolvements, registry | `proposals`, `proposal_inputs` | `run.proposed` |
 | 7 | Commit | approved proposals | truth rows, `proposal_decisions` | `proposal.committed` |
+
+**Seven stages, not eight.** Anchoring is not a stage. A document-level role ("this value is the document's investor") is a document-scoped resolvement — the same row that resolves a value label carries an optional `document_role`. Merging it into Stage 5 removes a stage, a table, an event, and a whole selection machine.
 
 ## Principles
 
@@ -34,7 +38,24 @@ A run is all-or-nothing per stage. A stage advances `status` only on full comple
 
 ## Event bus
 
-Each stage is an Inngest job triggered by exactly one event and emitting exactly one event. Re-running a stage re-emits its event and the downstream chain replays. The stage map table above is the chain: `source.uploaded` through `proposal.committed`. A precedent minted in review re-resolves held labels by re-emitting `run.resolved`.
+Each stage is an Inngest job triggered by exactly one event and emitting exactly one event. Re-running a stage re-emits its event and the downstream chain replays — no stage ever reaches around its neighbor. A precedent minted in review re-resolves held labels by re-emitting `run.resolved`.
+
+```mermaid
+flowchart LR
+  A[source.uploaded] --> P["parse + classify"]
+  P --> B[source.parsed]
+  B --> S[structure]
+  S --> C[run.structured]
+  C --> V[extract values]
+  V --> D[run.values_extracted]
+  D --> R["resolve labels + roles"]
+  R --> F[run.resolved]
+  F --> O[compute proposals]
+  O --> G[run.proposed]
+  G -.review.-> H[decisions]
+  H --> I[proposal.committed]
+  X[precedent minted] -.re-resolve held labels.-> F
+```
 
 ## Run spine
 
@@ -54,8 +75,6 @@ extraction_runs
   created_at        timestamptz
 ```
 
-The shapes below are the architectural contract. The Drizzle tables in `lib/<module>/schema.ts` are the implementation source of truth, and types derive from them.
-
 | Name | Description |
 | --- | --- |
 | Active pointer | `parses.active_run_id` designates the live run. Superseded runs stay for audit and are never read by downstream consumers. |
@@ -70,8 +89,8 @@ The shapes below are the architectural contract. The Drizzle tables in `lib/<mod
 A user or connector uploads a raw file. The file goes to R2 unmodified. A `sources` row is the provenance root.
 
 - The R2 object is written once. `r2_key` includes the content hash so the same bytes always land on the same key.
-- Duplicate upload, same `content_hash` within the org, creates a new `sources` row pointing at the existing R2 object. The pipeline is not re-run.
-- Duplicate provenance walks to the first uploader by design. The shared parse's `source_id` points at the original source.
+- Duplicate upload, same `content_hash` within the org, creates a new `sources` row pointing at the existing R2 object. The pipeline is not re-run; the new source links to the existing parse.
+- Duplicate provenance walks to the first uploader by design. The shared parse's `source_id` points at the original source, so walking a truth row back lands on the first uploader. Consumers that need "who most recently uploaded these bytes" query `sources` by `content_hash`, not the derivation walk.
 
 **Storage:** `sources`
 
@@ -93,12 +112,14 @@ Emits `source.uploaded`, triggers Stage 2.
 
 ### 2 Parse and classify
 
-The parser turns the raw file into a machine-readable artifact stored verbatim in R2. The `parses` row keeps `artifact_r2_key` and size metadata. The artifact is read through one accessor so the storage backend is swappable.
+The parser turns the raw file into a machine-readable artifact stored verbatim in R2. The artifact is the one big opaque blob in the system: a frozen, versioned snapshot of what the parser saw, from which every relational row downstream is deterministically derivable. The `parses` row keeps `artifact_r2_key` and size metadata. The artifact is read through one accessor so the storage backend is swappable.
 
-- The artifact is stored verbatim, no cleanup or enrichment. A derived shape is Stage 3's relational output.
-- Pages are first-class. Parse completion writes one `pages` row per page with index and dimensions. Every geometric row downstream foreign keys `page_id`. Bboxes are normalized `[x0, y0, x1, y1]` in `0.0` to `1.0`.
-- Classification is run-scoped, not parse-scoped. `doc_type` lives on `extraction_runs` because its only consumer is the Stage 5 scope chain. Reclassifying is a new run, never a mutation of the frozen parse.
-- `doc_type` is a scoping hint, never a hard gate. The scope chain falls through to org and global, so a wrong or missing `doc_type` degrades to broader precedents rather than blocking.
+Classification is run-scoped, not parse-scoped. `doc_type` lives on `extraction_runs` because its only consumer is the Stage 5 scope chain. Reclassifying is a new run over the same artifact, never a mutation of the frozen parse. `doc_type` is a scoping hint, never a hard gate: the scope chain falls through to org and global, so a wrong or missing `doc_type` degrades to broader precedents rather than blocking.
+
+- The artifact is stored verbatim, no cleanup or enrichment. A derived shape is Stage 3's relational output, not a second blob.
+- Artifact location: R2 from day one. Four parallel views of an agentic parse of a 50-page document are multiple MB; that never belongs in a Postgres row.
+- A source can have multiple parses (re-parse after a parser upgrade). Parses are append-only; `sources.active_parse_id` designates the live one explicitly.
+- Pages are first-class. Parse completion writes one `pages` row per page with index and dimensions. Every geometric row downstream foreign keys `page_id`. Bboxes are normalized `[x0, y0, x1, y1]` in `0.0` to `1.0`; the `pages` dimensions map back to PDF points.
 
 **Storage:** `parses`, `pages`
 
@@ -107,7 +128,7 @@ parses
   id                uuid PK
   source_id         FK sources
   parser            text
-  parser_version    text
+  parser_version    text        -- version + config hash; identifies determinism envelope
   status            enum: pending | succeeded | failed
   error             text (nullable)
   page_count        int
@@ -129,17 +150,114 @@ pages
   UNIQUE (parse_id, page_index)
 ```
 
+#### The parse artifact, by example
+
+The shape below is the target artifact the Stage 2 parser seam produces. It bundles the parser result's parallel views — structured items, grounded per-cell bboxes, markdown, plain text — into one frozen blob. All four views stay in the one artifact because they are projections of the same parse and are only consistent within it. Stage 3 joins views 1 and 2 to build relational geometry; Stage 4 reads view 3. Nothing downstream ever re-calls the parser.
+
+```jsonc
+{
+  "parserVersion": "llamaparse@2026-05",   // determinism envelope: parser + our seam version
+  "tier": "agentic_plus",                  // parse tier used (cost/quality knob)
+  "version": "0.6.2",
+  "pageCount": 4,
+
+  // VIEW 1: layout items per page. Feeds Stage 3 (tables, axes, cells) + Stage 4 (freestanding values).
+  "pages": [
+    {
+      "page_number": 1,
+      "page_width": 612, "page_height": 792,   // PDF points; needed to normalize bboxes to [0,1]
+      "items": [
+        { "type": "heading", "level": 1, "value": "Capital Account Statement",
+          "bbox": [{ "x": 43, "y": 51, "w": 320, "h": 22 }] },
+        { "type": "text", "value": "Fund: ABC Growth Fund III, L.P.\nInvestor: Jane Doe Family Trust",
+          "bbox": [{ "x": 43, "y": 90, "w": 400, "h": 36 }] },     // -> Stage 4 freestanding values
+        { "type": "table",
+          "rows": [
+            ["Description", "Current Quarter", "Year-to-Date"],
+            ["Beginning Capital Balance", "$12,500,000", "$11,800,000"],
+            ["Capital Contributions", "$500,000", "$1,200,000"]
+          ],
+          "html": "<table><thead><tr><th>Description</th>...</thead>...</table>",
+          "bbox": [{ "x": 40, "y": 240, "w": 530, "h": 210, "label": "table", "confidence": 0.98 }] }
+      ]
+    }
+  ],
+
+  // VIEW 2: grounded sidecar, per-CELL bboxes. Aligned to view 1 by page + table order.
+  // This is where Stage 3 cell/row/column bboxes come from.
+  "groundedItems": [
+    {
+      "page": 1,
+      "tables": [
+        { "rows": [
+            [ { "bbox": { "x": 44, "y": 246, "w": 120, "h": 16 } },
+              { "bbox": { "x": 210, "y": 246, "w": 110, "h": 16 } },
+              { "bbox": { "x": 360, "y": 246, "w": 100, "h": 16 } } ],
+            [ { "bbox": { "x": 44, "y": 268, "w": 180, "h": 15 } },
+              { "bbox": { "x": 214, "y": 268, "w": 96, "h": 15 } },
+              { "bbox": { "x": 362, "y": 268, "w": 96, "h": 15 } } ]
+          ] }
+      ]
+    }
+  ],
+
+  // VIEW 3+4: per-page markdown + plain text. Feeds Stage 4 (LLM reads markdown) and full-text search.
+  "markdownByPage": [ { "page_number": 1, "markdown": "# Capital Account Statement\n\nFund: ABC..." } ],
+  "textByPage":     [ { "page_number": 1, "text": "Capital Account Statement Fund: ABC..." } ],
+  "metadata": [ { "page": 1, "confidence": 0.99 } ]
+}
+```
+
 Emits `source.parsed`, triggers Stage 3.
 
 ### 3 Structural
 
 A pure deterministic function of the parse artifact. No LLM, no DB lookups, no network. It joins the artifact's layout view with the grounded sidecar and writes the relational substrate: tables, axes, cells, atoms, labels. Re-running with the same artifact and same `pipeline_version` produces identical rows.
 
-- Transcription, not interpretation. Stage 3 mirrors what the parser asserts about structure and asserts nothing of its own. It does not decide a row is a total, a table is transposed, or two tables are continuations. Those are meanings, resolved at Stage 5 and later.
-- One axis class covers rows, column headers, and spanning headers. A column header and a row are the same structural thing.
-- Atoms are pure payload: a quantity or date, deterministically parsed, never resolved. Every other string in a value position is a label.
-- A label plays a descriptor or value role derived from which slot references it, never from a column on the label.
-- Each structural occurrence mints its own label row. Dedup happens at resolvement.
+#### Fidelity contract: transcription, not interpretation
+
+This is what keeps a deterministic Stage 3 from breeding a code branch per document layout:
+
+> Stage 3 mirrors exactly what the parser asserts about structure — and asserts nothing of its own.
+
+It transcribes cell grid, spanning-header structure (from the `html` view), indent/level, and grounded bboxes. It never interprets: it does not decide a row is a total, that a table is transposed, that two tables are continuations, or that a blank column is a stub. Those are meanings, resolved at Stage 5 and later. Pathological layouts are absorbed downstream as data, never as Stage 3 code:
+
+| Layout hazard | What Stage 3 does | Where it resolves |
+| --- | --- | --- |
+| Totals / subtotal row | writes it as an ordinary row + label | its label resolves to a total-kind canonical (Stage 5); proposal sign/aggregation follows the registry |
+| Transposed table (metrics on the row axis) | writes symmetric `table_axes` (row/column are one class) | the metric axis is whichever axis's labels resolve to metrics — no orientation flag |
+| Continuation table across pages | two separate `tables` rows | identical `(canonical, slots, period)` merge at proposal dedup (Stage 6) |
+| Blank stub / unlabeled axis | axis row with `label_id = null` | nothing to resolve; carries no meaning |
+| Multi-row spanning header | `parent_axis_id` + `span_end` from the `html` structure | Stage 6 composition walks the axis hierarchy |
+| Doubled value in an emphasized cell (`70,727 70,727`) | lexical normalizer collapses byte-identical repeats; differing numbers mint no atom | coverage residue surfaces any dropped cell loudly (Stage 6) |
+
+#### The object model
+
+```text
+table --< table_axes (axis: row | column; hierarchical) --> label   (descriptor position)
+   |
+   +--< table_cells --> row axis, column axis (leaf)
+                   +--> exactly one of:  quantity_atom | date_atom | label (value position)
+```
+
+- **`table_axes`** — one object class for both rows and column headers. A column header and a row are the same thing structurally: an indexed line of the grid that may carry a label and may sit in a hierarchy. Instead of `table_rows` + `table_columns` + `table_headers`, one class covers all three.
+- **Atoms** (`quantity_atoms`, `date_atoms`) — deterministically parsed values. Pure payload: no geometry, no label text, never resolved. Geometry and context live on whatever carries the atom.
+- **`labels`** — pure text identity for any string whose meaning requires resolvement. Cross-document identity is the normalized text itself. No geometry — the carrier owns the bbox.
+
+#### The atom/label seam
+
+The discriminator between atom and label is not number-vs-text — it is:
+
+> Does deterministic lexical normalization fully capture the meaning (atom), or does the string need semantic resolvement (label)?
+
+Quantities (`$12,500,000` -> `12500000 USD`) and dates (`3/15/24` -> `2024-03-15`) are atoms. Every other string in a value position is a label, resolved through the same machinery as header labels. A label plays one of two roles, separated structurally by which slot references it — never by a flag on the label:
+
+| | Descriptor label | Value label |
+| --- | --- | --- |
+| Referenced from | `table_axes.label_id`, `kv.key_label_id` | `table_cells.value_label_id`, `kv.value_label_id`, narrative mention |
+| What it is | describes values stored elsewhere | is the value — the surface string is the payload |
+| Resolvement supplies | the meaning of other rows' payloads (canonical metric, period, entity axis, measure) | the reference/type of itself (entity link, literal, enum) |
+| Default expectation | canonical metric / period / entity / measure | entity mapping; literal/enum are exceptions |
 
 **Storage:** `tables`, `table_axes`, `table_cells`, `quantity_atoms`, `date_atoms`, `labels`
 
@@ -152,7 +270,9 @@ tables
   bbox                numeric[4]
   n_rows              int
   n_cols              int
-  title_label_id      FK labels (nullable)   -- heading directly above the table
+  title_label_id      FK labels (nullable)   -- heading directly above the table; joins the
+                                       -- governing chain at composition (allocation tables carry
+                                       -- their concept here while rows name only entities)
 
 table_axes
   id                  uuid PK
@@ -181,7 +301,7 @@ table_cells
   footnote_marker     text (nullable)
   UNIQUE (table_id, row_index, col_index)
 
-quantity_atoms
+quantity_atoms                         -- a measurable value; never resolved
   id                  uuid PK
   run_id              FK extraction_runs
   raw_text            text
@@ -189,7 +309,7 @@ quantity_atoms
   unit                text (nullable)        -- USD | EUR | ratio | shares
   normalization_version text
 
-date_atoms
+date_atoms                             -- a calendar value; never resolved
   id                  uuid PK
   run_id              FK extraction_runs
   raw_text            text
@@ -200,22 +320,31 @@ labels
   id                  uuid PK
   run_id              FK extraction_runs
   kind                enum: column_header | row_header | cell_text | kv_key | kv_value | narrative | table_title
+                      -- structural provenance ONLY, never a role; role derives from FK topology
   surface_text        text
   normalized_text     text                   -- cross-document identity; the precedent match key
-  unit_hint           text (nullable)
-  scale_hint          numeric (nullable)
+  unit_hint           text (nullable)        -- currency/percent affix stripped: "INVESTOR (EUR)" -> unit_hint EUR
+  scale_hint          numeric (nullable)     -- "in $1,000s" -> 1000
 ```
+
+Normalizer rules (all pure, versioned by `normalization_version`, no LLM):
+
+- **Lexical only.** `$5MM -> 5_000_000 USD`, `(93,750) -> -93750`, `3/15/24 -> 2024-03-15`. Interpretation is Stage 5+.
+- **Label affixes are extracted, not resolved.** Unit/scale qualifiers strip into `unit_hint`/`scale_hint`; matching is on the remainder, so generic headers become more matchable.
+- **Identical repetition collapses.** Byte-identical repeated numeric tokens (`70,727 70,727`) and character-interleaved doubling (`IINNVVEESSTTEEEERRDDEERR`) collapse deterministically. Two differing numbers in one cell never guess: no atom is minted, `raw_text` is kept, and the coverage invariant surfaces it loudly.
+- **Number locale is inferred per document.** A document-level pre-pass fixes locale from unambiguous tokens (`X.XXX,XX` vs `X,XXX.XX`); ambiguous tokens then follow it. Intra-number whitespace is cleaned in the same pass.
+- **A lone currency token joins the adjacent number.** A cell/token holding only a currency symbol (`$ | 9,907,245.92`) is absorbed as the adjacent atom's unit; a currency-only column mints no atoms.
 
 Emits `run.structured`, triggers Stage 4.
 
 ### 4 Non-table
 
-Values outside tables: title-block key-value pairs, amounts and dates in prose, standalone mentions. This stage reuses the Stage 3 payload objects. The only new object is the carrier, `freestanding_values`.
+Values outside tables: title-block key-value pairs, amounts and dates in prose, standalone mentions. This stage reuses the Stage 3 payload objects. The only new object is the carrier, `freestanding_values` — a KV pair and a narrative value are the same thing structurally: a value occurrence outside a grid, with an optional key.
 
-- One LLM pass over per-page markdown with tables stripped. One prompt version to audit.
-- Verbatim guard. Every extracted span must appear verbatim in the parse artifact. `raw_text` is the proof, `bbox` is recovered by grounding the span back to the artifact.
-- Pairing is geometric, not reading-order. Key to value linking uses grounded bboxes. A weak or ambiguous pairing becomes a review item, never a silent commit.
-- The LLM extracts, it does not interpret. A key becomes a label like any other and waits for Stage 5.
+- **One LLM pass** over per-page markdown with tables stripped. One prompt version to audit (`extractor_version`).
+- **Verbatim guard.** Every extracted span must appear verbatim in the parse artifact. `raw_text` is the proof; `bbox` is recovered by grounding the span against the artifact's grounded token bboxes (not the lossy markdown). An ungroundable span is rejected.
+- **Pairing is geometric, not reading-order.** Key-to-value linking uses grounded bboxes (spatial adjacency), never markdown proximity. `pairing_method` records the signal, `pairing_confidence` its strength. A weak or ambiguous pairing becomes a review item, never a silent commit — this is the one place a parser quirk could otherwise produce wrong truth rather than residue.
+- **The LLM extracts, it does not interpret.** A key becomes a label like any other and waits for Stage 5. No dedup here; corroboration happens at Stage 6.
 
 **Storage:** `freestanding_values`
 
@@ -241,34 +370,73 @@ Emits `run.values_extracted`, triggers Stage 5.
 
 ### 5 Resolvement
 
-Every label gets one resolvement per run through one machine. This stage also assigns document roles: a role is a document-scoped resolvement, not a separate stage or table.
+Every label — descriptor or value, table or freestanding — gets exactly one resolvement per run through one machine. This stage also assigns document roles: a role is a document-scoped resolvement, not a separate stage or table. The same row that resolves `"Jane Doe Family Trust"` to an entity can carry `document_role = investor`.
 
-- The resolve ladder: precedent exact match, candidate generation, LLM pick among candidates, human confirm. Only the precedent rung auto-accepts.
-- An exact match requires exactly one non-revoked precedent on `normalized_text` at the winning scope tier, an applicable scope, and a still-valid target. Conflicts fall through, never guess.
-- The scope chain is `doc_type`, then `org`, then `global`, most specific first.
-- Document roles ride on `label_resolvements` via a `document_role` column with a partial unique index, one winner per role per run. Election is candidate-only and never introduces a value Stage 4 did not extract.
-- Confirming a mapping mints an org-wide precedent by default. The flywheel: every human correction is a precedent, so the system asks fewer questions tomorrow.
+#### The universal target
+
+A resolvement (and a precedent) always asserts one thing: a target. The target's kind is what makes the system universal:
+
+| target_kind | target payload | typical label |
+| --- | --- | --- |
+| `canonical_metric` | base concept, optionally scope-qualified (`capital_called@inception_to_date`) | metric header, KV key like "Capital Called" |
+| `entity` | entity id (or a mint request) | fund/investor name |
+| `document_ref` | document role name (`investor`, `fund`) | role-selector header (`INVESTOR`, `FUND`) — points at the document's role, names no concrete entity |
+| `period` | period strategy (`QUARTER@period_end`, literal date) | date-axis header, "Period Ended" key |
+| `measure` | representation: `value` \| `percentage` \| `shares` \| `ratio` | generic value header (`Amount`, `%`) — supplies how a number is represented, never what it is |
+| `literal` | the surface string is the value | IBAN, account number, status code |
+
+Three of these compose rather than stand alone:
+
+- **`canonical_metric` targets may carry a temporal scope.** Temporal scope changes what the number is (cumulative capital called != this quarter's call). The registry defines each base concept's allowed scopes (`period`, `year_to_date`, `inception_to_date`, `instant`, `transaction`) as data, not schema. Scopes are context-free, so "before/after this notice" is never a scope — both are `inception_to_date` at two different as-of dates.
+- **`document_ref` targets defer to the document's roles.** `INVESTOR (EUR)` names no entity; it dereferences whatever the document's `investor` role resolves to, the symmetric counterpart of `document_role`.
+- **`measure` targets carry no meaning of their own.** They attach to whichever base concept governs the same cell at composition. `"amount" -> value`, `"%" -> percentage` are prime global seed precedents.
+
+#### The resolve ladder (per label)
+
+```text
+1. PRECEDENT — exact match on normalized_text within the scope chain
+   (doc_type -> org -> global); deterministic, auto-accepted
+2. CANDIDATE GENERATION — mechanical, non-LLM: registry similarity (metrics),
+   blocking + similarity vs entities + aliases, period/measure recognizers
+3. REASONING — LLM picks among the enumerated candidates only (or abstains);
+   result is PROPOSED, prefilled in review, never auto-accepted
+4. HUMAN — confirms / overrides in review; confirmation writes a precedent (the flywheel)
+```
+
+There is deliberately no positional/structural match tier. A label's cross-document identity is its normalized text plus the document's `doc_type` — the same key whether it came from a table header, a KV key, or prose. Positional context is used compositionally in Stage 6, keeping precedents robust to layout drift.
+
+An exact match (step 1, the only auto-accepting tier) fires only when all three hold: exactly one non-revoked precedent matches the `normalized_text` at the winning scope tier (string equality, never similarity); its scope applies to this document (`doc_type -> org -> global`, most specific first); and the target is still valid. Conflicts fall through to candidates, never guess. Bare/generic labels ("Amount", "Total", "%") must never bind to a base concept — their correct resolvement is a `measure` target.
+
+#### Document roles (the former anchoring stage)
+
+A document role elects one already-resolved occurrence as the document's default for that role. It rides on the same resolvement rows via a `document_role` column and a small election pass:
+
+- **Election is candidate-only**, like the LLM step: it enumerates compatible resolvements and picks one or abstains. It never introduces a value Stage 4 did not extract. A value whose key resolved to `document_ref` for the role (`FUND:` -> `document_ref:fund`) is the strongest signal.
+- **No precedent tier for roles** — which occurrence is this document's investor is inherently per-document. The underlying entity/period mapping still precedents normally.
+- **Re-pointing a role is one write** — moving `document_role` between resolvement rows, guarded by the partial unique index.
 
 **Storage:** `label_resolvements`, `resolvement_candidates`, `precedents`
 
 ```text
-label_resolvements
+label_resolvements                      -- one row per label per run
   id                  uuid PK
   run_id              FK extraction_runs
   label_id            FK labels UNIQUE
   status              enum: auto | proposed | confirmed | rejected
   target_kind         enum: canonical_metric | entity | document_ref | period | measure | literal
-  target_ref          text (nullable)
-  mint_request        jsonb (nullable)       -- new entity proposal
+  target_ref          text (nullable)   -- (scope-qualified) concept / entity id / role name / period strategy / representation
+  mint_request        jsonb (nullable)  -- new entity proposal
   method              enum: precedent | llm | human
   precedent_id        FK precedents (nullable)
-  document_role       text (nullable)        -- partial UNIQUE (run_id, document_role)
+  document_role       text (nullable)   -- e.g. investor | fund | period_end; validated against
+                                        -- registry slot names, not a DB enum. Partial UNIQUE
+                                        -- (run_id, document_role) WHERE document_role IS NOT NULL
   confidence          numeric
   rationale           text (nullable)
   resolver_version    text
   created_at          timestamptz
 
-resolvement_candidates
+resolvement_candidates                  -- the enumerated options the decision was made among
   id                  uuid PK
   resolvement_id      FK label_resolvements
   rank                int
@@ -277,10 +445,10 @@ resolvement_candidates
   score               numeric
   source              enum: precedent_knn | registry_similarity | entity_blocking | recognizer
 
-precedents
+precedents                              -- THE universal precedent store
   id                  uuid PK
-  organization_id     FK (nullable)          -- null only for scope = global
-  match_key           text                   -- the label normalized_text; the only match dimension
+  organization_id     FK (nullable)     -- NULL only for scope = global
+  match_key           text              -- the label normalized_text; the only match dimension
   scope               enum: doc_type | org | global
   scope_ref           text (nullable)
   target_kind         enum (as above)
@@ -290,7 +458,11 @@ precedents
   match_count         int
   last_used_at        timestamptz
   revoked_at          timestamptz (nullable)  -- precedents are never deleted, only revoked
+  -- one active target per (organization_id, match_key, scope, scope_ref):
+  -- partial UNIQUE (...) WHERE revoked_at IS NULL
 ```
+
+Rules: exact precedent hits auto-accept (`status = auto`); everything from the LLM is `proposed` until a human confirms. One store for metrics and entities (an entity alias is a precedent with `target_kind = entity`). Confirmation mints org-wide by default. `global` is the cross-org seed tier. Precedents are append-only: corrections revoke and re-mint. Roles never gate mapping — a missing role surfaces downstream as a `blocked` proposal, never as silence here.
 
 Emits `run.resolved`, triggers Stage 6.
 
@@ -298,34 +470,44 @@ Emits `run.resolved`, triggers Stage 6.
 
 A proposal is computed, never authored: `proposal = f(carrier payload, resolvements, registry, document roles)`. Stage 6 runs `f()` over every carrier and persists the result plus its input lineage.
 
-- `f()` is an ordered chain of small pure rules. Build the per-rule fixture matrix up front: governing-chain assembly, exactly-one canonical, scope precedence, as-of derivation, unit and scale fall-through, representation, dedup, series-identity.
-- Fact identity is base concept plus temporal scope plus slots plus when plus representation. The same header under a quarter-to-date and an inception-to-date column composes into two cleanly distinct facts.
-- The proposal body is the only JSONB in Postgres, a disposable projection rebuildable from `proposal_inputs`.
-- Loud failure: a position metric missing its investor slot is `blocked` with a flag, never silently reshaped into an entity metric.
-- Every atom or value label must end up referenced by some proposal or be explicitly marked dropped. Residue is a run-level report, not silence.
+This is the pipeline's center of gravity. Stages 3 to 5 stay simple precisely because composition absorbs the difficulty. `f()` is an ordered chain of small pure rules — each unit-testable in isolation with a minimal fixture. Build the per-rule fixture matrix (0/1/2 governing canonicals, scope conflict, mixed-currency, missing unit, series-identity pass/fail) up front.
+
+A cell's governing labels are its full row-axis ancestor chain + full column-axis ancestor chain + the table's title label (+ document roles for slots nothing local fills). Each resolved target contributes one component of the fact:
+
+- **Base concept** — exactly one governing label must resolve to a `canonical_metric`, wherever it is (leaf header, spanning parent, other axis, or table title). Zero -> residue; two -> `blocked` with a flag. Prose-level context (currency, period, "in thousands") resolves to a label and joins the chain as a default; per-column meaning encoded solely in prose is left unbound (loud residue, review binds candidate-only).
+- **Temporal scope** — from the qualified canonical if the label embedded it, else a governing `period` resolvement, else the registry default. Label-embedded scope wins over axis-derived; disagreement flags `scope_conflict`.
+- **As-of date** — cumulative/instant metrics are read as of a point in time. The document's transaction resolves to a date; "after this notice" places cells at that as-of, "prior to this notice" at the as-of immediately before. Two cumulative figures compose into the same metric at two as-of dates.
+- **Representation** — from a governing `measure` resolvement, cross-checked against the atom's unit and the registry. Absent -> default `value`.
+- **Unit + scale** — fall-through: atom's own unit -> nearest governing label's `unit_hint` -> document-level currency -> flag `missing_unit`. Mixed currency defeats the document default deliberately: when siblings carry differing `unit_hint`s, an un-hinted atom flags `missing_unit` rather than inheriting a default. FX is never computed.
+- **Entity slots + when** — axis labels, then document roles. A governing `document_ref` label fills its slot by dereferencing the document role; the investor/fund table split falls out of ordinary slot-filling.
+- **Cross-fact validation** — the prior/current/after triple is a time-series identity: `cumulative(before) + flow(this) = cumulative(after)`. Persist the "after" stock and the current-drawdown flow (both carry absolute dates); the "prior" figure is a corroborating input, not an independent row. A broken identity flags `series_identity_mismatch`.
+
+**Fact identity = base concept + temporal scope + slots + when (+ representation).** This lets "Capital Called" under both a QTD and an ITD column compose into two cleanly distinct facts. The proposal body is the only JSONB in Postgres — a disposable projection rebuildable from `proposal_inputs`.
 
 **Storage:** `proposals`, `proposal_inputs`
 
 ```text
-proposals
+proposals                               -- recomputable projection of f(); one row per computed proposal
   id                  uuid PK
   run_id              FK extraction_runs
-  identity            text                   -- stable hash over payload lineage; keys the decision log
+  identity            text              -- stable hash over payload lineage; survives recompute, keys the decision log
   kind                enum: entity | metric
-  body                jsonb                  -- computed proposal; the only JSONB in Postgres, disposable
+  body                jsonb             -- computed proposal; the only JSONB in Postgres, disposable
   body_hash           text
-  status              enum: ready | blocked | flagged
-  flags               text[]                 -- missing_required_slot:investor, scope_conflict, ...
+  status              enum: ready | blocked | flagged   -- blocked: missing required slot (loud)
+  flags               text[]            -- missing_required_slot:investor, scope_conflict, ...
   compute_version     text
   computed_at         timestamptz
   UNIQUE (run_id, identity)
 
-proposal_inputs
+proposal_inputs                         -- the explicit computation audit: exactly what f() consumed
   proposal_id         FK proposals
   input_kind          enum: cell | freestanding_value | resolvement | registry_version
   input_ref           text
-  role                text                   -- value | metric_label | entity_slot:investor | period | ...
+  role                text              -- value | metric_label | entity_slot:investor | period | ...
 ```
+
+Rules: recompute, not sync — editing a resolvement re-runs `f()` for affected proposals in place. Loud failure — a position metric missing its investor slot is `blocked`, never silently reshaped. Dedup/corroboration happens here. Every atom/value label must end up referenced by a proposal or be explicitly marked dropped (the coverage invariant); residue is a run-level report, not silence. Relationship edges (`invests_in`) are not proposals in v2 — a position metric names both endpoints, so the edge is upserted as a side effect at commit.
 
 Emits `run.proposed`. Review is ready.
 
@@ -333,28 +515,96 @@ Emits `run.proposed`. Review is ready.
 
 Approval turns a proposal into truth. Decisions are append-only and keyed on the proposal's stable `identity`, not its row id, so they survive recompute and re-extraction.
 
-- Approve commits the truth rows and the decision row in one transaction. Each truth row carries `decision_id`.
+- Approve commits the truth rows and the decision row in one transaction. Each truth row carries `decision_id`, so truth -> decision -> proposal -> inputs -> cell -> parse -> source is one unbroken provenance walk.
 - Staleness is derived. If a decided proposal's recomputed `body_hash` no longer matches `body_hash_at_decision`, it is flagged stale and re-queued.
 - Reverts append a decision and reverse the truth write. Nothing is deleted.
 
 **Storage:** `proposal_decisions`
 
 ```text
-proposal_decisions
+proposal_decisions                      -- append-only; the durable human/agent record
   id                  uuid PK
   organization_id     FK
-  proposal_identity   text                   -- joins to proposals.identity
+  proposal_identity   text              -- joins to proposals.identity
   kind                enum: approve | reject | edit
   actor               FK member (or agent identifier)
-  body_hash_at_decision text                 -- what the human actually saw
-  edited_body         jsonb (nullable)       -- present on edit
+  body_hash_at_decision text            -- what the human actually saw
+  edited_body         jsonb (nullable)  -- present on edit
   created_at          timestamptz
 ```
 
 Emits `proposal.committed`.
 
+## The review screen
+
+One screen per source, one queue, reading the relational substrate directly. The queue mixes item types (filterable), ordered so upstream decisions come first — confirming a label mapping collapses the cell-level items beneath it:
+
+1. **Label mappings** — labels with `proposed`/missing resolvements, grouped by normalized form, prefilled with the LLM pick + candidates + rationale. Confirming writes the resolvement, mints the precedent, and recomputes affected proposals live.
+2. **Document roles** — the resolvements carrying a `document_role`, shown with their pointed-at value and page/bbox highlight; re-pointing recomputes downstream. A filtered view of the resolvement queue, no separate anchor screen.
+3. **Freestanding values** — non-table values with their optional key labels and payloads; mostly confirmation reading.
+4. **Bulk approve tables** — the grid in document geometry, axis labels as chips, cells showing computed proposals; approve-all commits every `ready` proposal in the table.
+
 ## Bundle splitting
 
-A source is one logical document. A PDF containing several statements is not split. This is load-bearing: the partial unique index `(run_id, document_role)` allows exactly one investor, fund, and period_end per run, so a bundle of several investor statements is structurally unrepresentable. The clean seam to retrofit splitting is between Stage 1 and Stage 2: a `documents` layer so one source fans out into N logical documents, each parsed independently.
+A source is one logical document. A PDF containing several statements is not split. This is load-bearing: the partial unique index `(run_id, document_role)` allows exactly one investor, fund, and period_end per run, so a bundle of several investor statements is structurally unrepresentable. The clean seam to retrofit splitting is between Stage 1 and Stage 2: a `documents` layer so one source fans out into N logical documents, each parsed independently. A single-document source is the degenerate N=1 case.
+
+## Decision log
+
+The running record of resolved design decisions, folded into the stage text above.
+
+| # | Question | Decision |
+| --- | --- | --- |
+| 1 | Bundle splitting | Dropped from v2 ("source = one logical document" is load-bearing); escape hatch is a `documents` layer between Stage 1 and 2 |
+| 2 | Duplicate upload | New `sources` row sharing the R2 object; no re-parse. Derivation walk lands on the original uploader by design |
+| 3 | Active parse + run | Explicit `active_parse_id` on `sources`; explicit `active_run_id` on `parses` — downstream follows the pointers |
+| 4 | Artifact location | R2 from day one (`artifact_r2_key` + size on `parses`); single accessor keeps it swappable |
+| 5 | Run spine | Thin `extraction_runs` keyed to `parse_id`; carries run-scoped `doc_type`; all-or-nothing per stage |
+| 6 | Pages | First-class `pages` table |
+| 7 | Axes model | Unified `table_axes` class for rows + columns + headers |
+| 8 | Empty cells | Skipped; indices preserve grid geometry |
+| 9 | Label dedupe | One label per structural occurrence; dedup via normalized text at resolvement |
+| 10 | Atom seam | Atoms = deterministically parsed values only. All strings in value positions are labels |
+| 11 | Descriptor vs value labels | Role derived from FK topology, never a column on the label |
+| 12 | Label kind | Pure structural provenance; meaning is always a resolvement outcome |
+| 13 | Stage 4 carrier | One `freestanding_values` class for KV pairs + narrative + keyless mentions |
+| 14 | Stage 4 extraction | Single LLM pass over per-page markdown (verbatim guard); pairing uses grounded bboxes |
+| 15 | Stage 4 scope | Stage 4 extracts every non-table value (high recall); role election is Stage 5 |
+| 16 | Anchoring merged | No `anchors` table/stage; a document role is a `document_role` column on `label_resolvements` |
+| 17 | Role vocabulary | Validated against registry slot names, not a DB enum |
+| 18 | Role election | Candidate-only, no precedent tier (roles are per-document) |
+| 19 | Role edits | Proposals compute immediately; re-pointing moves `document_role` (partial-unique guarded) |
+| 20 | Precedent store | One universal table; `target_kind` discriminates (entity aliases included) |
+| 21 | Scope chain | doc_type -> org -> global, first hit wins |
+| 22 | Entity minting | No entity rows before proposal approval; mint request lives on the resolvement |
+| 23 | Proposal model | Computed body (jsonb projection) + explicit `proposal_inputs` lineage + append-only decisions keyed on stable identity |
+| 24 | Edge proposals | Deferred from v2; `invests_in` upserted at commit as side effect |
+| 25 | Approve = commit | One action; truth rows + decision row in one transaction |
+| 26 | Review screen | One queue per source mixing item types |
+| 27 | Stage count | Seven stages, not eight — anchoring folded into resolvement |
+| 28 | Doc type producer | Produced at parse but run-scoped (`doc_type` on `extraction_runs`); reclassify = new run; a scoping hint, never a hard gate |
+| 29 | Stage 3 fidelity | "Transcription, not interpretation" contract; layout hazards absorbed downstream |
+| 30 | Design scope | v2 is a greenfield target design; migration from the running pipeline is out of scope |
+| 31 | Exact match | Exactly one non-revoked precedent at the winning tier + applicable scope + still-valid target |
+| 32 | `global` scope | Cross-org platform seeds at the bottom of every scope chain |
+| 33 | Mint scope | Confirmations mint org-wide by default (`doc_type` scope opt-in) |
+| 34 | Matching is lexical-only | Structural precedent tier removed; identity is `(doc_type, normalized_text)`; positional context used at Stage 6 |
+| 35 | Temporal scope | Part of the fact's identity; registry declares allowed scopes; label-embedded scope beats axis-derived |
+| 36 | Measure (was carrier) | `measure` target_kind = representation; bare labels never bind to canonicals; prime global seeds |
+| 37 | Role references | `document_ref` target kind: a label resolves to a document role name, dereferenced at composition |
+| 38 | Unit/scale hints | Label affixes stripped lexically at Stage 3; composition hydrates units via fall-through |
+| 39 | Doubled values | Byte-identical repeated numeric tokens collapse; differing numbers mint no atom, surface as residue |
+| 40 | Pre/post = as-of date, not scope | "Before/after this notice" is the same scope at two as-of dates; truth carries an absolute date |
+| 41 | Table title | `tables.title_label_id` joins the governing chain; null degrades to residue |
+| 42 | Number locale | Inferred per document in a deterministic pre-pass; versioned by `normalization_version` |
+| 43 | Character doubling | Repetition collapse extended to character-interleaved doubling; a mis-collapse costs only a precedent miss |
+| 44 | Scope / as-of selectors | Row-group parents are ordinary labels; scope selectors set temporal scope, as-of selectors set the as-of |
+| 45 | Prose-described context | Non-positional prose resolves to a table/document default; per-column prose-only meaning is not guessed |
+| 46 | Geometric KV pairing | Stage 4 links key-value over grounded bboxes; weak pairings become review items |
+| 47 | Mixed-currency guard | Differing sibling `unit_hint`s flag `missing_unit` rather than inheriting a default; no FX |
+| 48 | Currency-token cells | A currency-only cell is absorbed as the adjacent atom's unit; a currency-only column mints no atoms |
+| 49 | Ratio representation | `measure` gains `ratio` for multiple-style values; intrinsically-ratio concepts remain their own canonical |
+| 50 | Run idempotency | A run advances `status` only on full stage completion; recovery is a new run, never a resume |
+| 51 | Span grounding | Stage 4 grounds spans against grounded token bboxes; ungroundable span rejected |
+| 52 | Truth-class vocabulary | Canonical names: `asset_metric`, `investment_metric`, `TruthClass` (umbrella) |
 
 Placement rules: [Structure](/architecture/structure). Type rules: [Types](/architecture/types). Job rules: [Jobs](/architecture/jobs). Persistence rules: [Database](/architecture/database).
